@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Draft Picker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f13;
+      color: #e8e8ed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 3.5rem;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.3rem; letter-spacing: -0.02em; }
+    p.sub {
+      color: #888; margin-bottom: 1.4rem; font-size: 0.9rem;
+      text-align: center; max-width: 560px; line-height: 1.45;
+    }
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      justify-content: center; margin-bottom: 1.1rem;
+    }
+    button, label.file-btn {
+      border: none; padding: 0.62rem 1.05rem; font-size: 0.86rem;
+      font-weight: 600; border-radius: 10px; cursor: pointer;
+      transition: background 0.2s, transform 0.15s, opacity 0.2s;
+      display: inline-flex; align-items: center;
+    }
+    button:active, label.file-btn:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #generate { background: #6c5ce7; color: white; }
+    #generate:hover:not(:disabled) { background: #5a4bd1; }
+    #starterBtn { background: #0984e3; color: white; }
+    #starterBtn:hover:not(:disabled) { background: #0770c2; }
+    #manualPick { background: #e17055; color: white; }
+    #manualPick:hover:not(:disabled) { background: #d16045; }
+    #banBtn { background: #636e72; color: white; }
+    #banBtn:hover { background: #555f63; }
+    #customBtn { background: #a29bfe; color: #1a1a2e; }
+    #customBtn:hover { background: #8b83e8; }
+    #export { background: #00b894; color: white; }
+    #export:hover { background: #00a884; }
+    #reset { background: #2d2d38; color: #ccc; border: 1px solid #3d3d4a; }
+    #reset:hover { background: #3a3a48; color: #fff; }
+    #deathReset { background: #5c2a2a; color: #f88; border: 1px solid #833; }
+    #deathReset:hover { background: #6e3333; }
+    #prestigeBtn { background: #f1c40f; color: #1a1a2e; display: none; }
+    #prestigeBtn:hover { background: #e0b40a; }
+    #prestigeBtn.show { display: inline-flex; }
+    #rerollBtn { background: #fdcb6e; color: #1a1a2e; }
+    #rerollBtn:hover:not(:disabled) { background: #f0b84a; }
+    #finalizeBtn { background: #00cec9; color: #0a1a1a; }
+    #finalizeBtn:hover:not(:disabled) { background: #00b5b0; }
+    label.file-btn { background: #2d2d38; color: #ccc; border: 1px solid #3d3d4a; }
+    label.file-btn:hover { background: #3a3a48; color: #fff; }
+    input[type="file"] { display: none; }
+
+    .status { font-size: 0.88rem; color: #777; margin-bottom: 0.9rem; text-align: center; line-height: 1.6; }
+    .status strong { color: #aaa; }
+
+    .xp-panel {
+      width: 100%; max-width: 520px; background: #16161d;
+      border: 1px solid #2a2a35; border-radius: 14px;
+      padding: 1rem 1.2rem; margin-bottom: 1.15rem;
+    }
+    .xp-panel h2 { font-size: 1rem; color: #aaa; margin-bottom: 0.55rem; }
+    .xp-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem; }
+    .xp-bar { height: 10px; background: #1c1c24; border-radius: 5px; overflow: hidden; margin-bottom: 0.4rem; }
+    .xp-bar > div { height: 100%; background: linear-gradient(90deg, #6c5ce7, #a29bfe); border-radius: 5px; transition: width 0.3s; }
+    .total-xp { font-size: 0.8rem; color: #666; margin-bottom: 0.7rem; }
+    .total-xp strong { color: #888; }
+    .xp-add { display: flex; gap: 0.5rem; align-items: center; }
+    .xp-add input {
+      flex: 1; background: #1c1c24; border: 1px solid #333; color: #e8e8ed;
+      padding: 0.45rem 0.6rem; border-radius: 8px; font-size: 0.9rem;
+    }
+    .xp-add button { background: #6c5ce7; color: white; padding: 0.45rem 0.9rem; }
+
+    .starter-bar {
+      display: none; flex-wrap: wrap; gap: 0.55rem; justify-content: center;
+      margin-bottom: 1.1rem; padding: 0.7rem 1rem; background: #16161d;
+      border: 1px solid #2a2a35; border-radius: 12px; width: 100%; max-width: 600px;
+    }
+    .starter-bar.active { display: flex; }
+    .starter-bar .hint-text { width: 100%; text-align: center; font-size: 0.82rem; color: #888; margin-bottom: 0.2rem; }
+
+    .cards {
+      display: flex; flex-wrap: wrap; gap: 1.1rem; justify-content: center;
+      max-width: 980px; width: 100%; min-height: 130px;
+    }
+    .card {
+      background: #1c1c24; border: 1px solid #2a2a35; border-radius: 16px;
+      padding: 1.35rem 1.1rem 1.1rem; width: 220px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s; position: relative;
+    }
+    .card:hover { border-color: #6c5ce7; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(108, 92, 231, 0.15); }
+    .card.selected { border-color: #00cec9; box-shadow: 0 0 0 2px #00cec9; pointer-events: none; }
+    .card.locked { border-color: #00cec9; box-shadow: 0 0 0 2px #00cec9; background: #152525; }
+    .card.locked .hint { color: #00cec9; }
+    .card.freepick { border-color: #fdcb6e; background: #1f1c16; }
+    .card.weighted {
+      border-color: #f1c40f; background: linear-gradient(145deg, #2a2410, #1c1c24);
+      box-shadow: 0 0 12px rgba(241, 196, 15, 0.45), 0 0 28px rgba(241, 196, 15, 0.2);
+      animation: goldPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes goldPulse {
+      0%, 100% { box-shadow: 0 0 12px rgba(241, 196, 15, 0.4), 0 0 24px rgba(241, 196, 15, 0.15); }
+      50% { box-shadow: 0 0 18px rgba(241, 196, 15, 0.7), 0 0 36px rgba(241, 196, 15, 0.3); }
+    }
+    .card .badge { position: absolute; top: 8px; right: 10px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; color: #f1c40f; text-transform: uppercase; }
+    .card .number { position: absolute; top: 10px; left: 12px; font-size: 0.75rem; color: #666; font-weight: 600; }
+    .card .name { font-size: 1.1rem; font-weight: 600; margin: 0.35rem 0; line-height: 1.3; }
+    .card .hint { font-size: 0.78rem; color: #666; }
+    .card .reroll-one {
+      margin-top: 0.55rem; background: #2d2d38; color: #fdcb6e; border: 1px solid #4a4030;
+      padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 6px; width: 100%;
+    }
+    .card .reroll-one:hover:not(:disabled) { background: #3a3a48; }
+    .card .reroll-one:disabled { opacity: 0.35; }
+    .empty { color: #555; font-style: italic; width: 100%; text-align: center; padding: 1.5rem 0; }
+
+    .panel {
+      width: 100%; max-width: 700px; background: #16161d; border: 1px solid #2a2a35;
+      border-radius: 14px; padding: 1.1rem 1.25rem; margin-top: 1.6rem;
+    }
+    .panel h2 { font-size: 1.05rem; color: #aaa; margin-bottom: 0.7rem; font-weight: 600; }
+    .panel .hint { font-size: 0.8rem; color: #666; margin-bottom: 0.7rem; }
+    .slots { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .slot {
+      min-width: 110px; min-height: 52px; background: #1c1c24; border: 1px dashed #3d3d4a;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      padding: 0.4rem 0.6rem; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; text-align: center;
+    }
+    .slot:hover { border-color: #6c5ce7; }
+    .slot.filled { border-style: solid; border-color: #00cec9; color: #00cec9; background: #1a2a28; }
+    .slot.empty-label { color: #555; font-size: 0.78rem; }
+    .picked-list { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .picked-item {
+      background: #1a2a28; border: 1px solid #1e4a44; color: #00cec9;
+      padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.85rem; font-weight: 500;
+    }
+    .ban-item {
+      background: #2a1a1a; border: 1px solid #5a2a2a; color: #f88;
+      padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.85rem;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .ban-item button, .slot-remove {
+      background: transparent; border: none; color: inherit; cursor: pointer; font-size: 0.85rem; padding: 0; opacity: 0.7;
+    }
+    .ban-item button:hover { opacity: 1; }
+    .no-picked { color: #555; font-size: 0.9rem; font-style: italic; }
+    .ban-list { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.6rem; }
+    .ban-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+    .ban-controls select {
+      background: #1c1c24; border: 1px solid #333; color: #e8e8ed;
+      padding: 0.4rem 0.55rem; border-radius: 8px; font-size: 0.85rem;
+    }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1c1c24; border: 1px solid #3d3d4a; border-radius: 16px;
+      width: 100%; max-width: 440px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal header { padding: 1.05rem 1.2rem; border-bottom: 1px solid #2a2a35; font-weight: 600; font-size: 1.05rem; }
+    .modal .body { padding: 1rem 1.2rem; overflow-y: auto; flex: 1; }
+    .modal .list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .modal .list button {
+      background: #252530; color: #e8e8ed; border: 1px solid #333; text-align: left;
+      padding: 0.65rem 0.95rem; border-radius: 8px; font-size: 0.92rem; width: 100%;
+    }
+    .modal .list button:hover { background: #6c5ce7; border-color: #6c5ce7; }
+    .modal footer { padding: 0.8rem 1.2rem; border-top: 1px solid #2a2a35; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .modal footer button { background: transparent; color: #888; border: 1px solid #3d3d4a; padding: 0.45rem 0.95rem; font-size: 0.85rem; }
+    .modal footer button:hover { color: #fff; }
+    .modal textarea {
+      width: 100%; min-height: 120px; background: #16161d; border: 1px solid #333;
+      border-radius: 10px; color: #e8e8ed; padding: 0.7rem; font-size: 0.95rem;
+      resize: vertical; font-family: inherit; margin-bottom: 0.7rem;
+    }
+    .modal textarea:focus { outline: none; border-color: #6c5ce7; }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1c1c24; border: 1px solid #3d3d4a; color: #e8e8ed; padding: 0.7rem 1.3rem;
+      border-radius: 10px; font-size: 0.9rem; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s; z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <h1>Random Draft Picker</h1>
+  <p class="sub">
+    Generate unlocks every 4 levels · Reroll individual cards with tokens<br>
+    Starter = lock / reroll / finalize · Golden = weighted prereq card
+  </p>
+
+  <div class="controls">
+    <button id="starterBtn">Starter Draft</button>
+    <button id="generate">Generate 3 Cards</button>
+    <button id="manualPick">Manual Pick</button>
+    <button id="banBtn">Ban Cards</button>
+    <button id="customBtn">Custom Random</button>
+    <button id="export">Export Save</button>
+    <label class="file-btn">Import Save<input type="file" id="import" accept=".json,application/json"></label>
+    <button id="deathReset">Death Reset</button>
+    <button id="reset">Full Reset</button>
+    <button id="prestigeBtn">Prestige</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="xp-panel">
+    <h2>Level &amp; Experience</h2>
+    <div class="xp-row">
+      <span>Level <strong id="levelDisplay">1</strong> / 100</span>
+      <span id="xpText">0 / 500 XP</span>
+    </div>
+    <div class="xp-bar"><div id="xpBarFill" style="width:0%"></div></div>
+    <div class="total-xp">Total XP earned: <strong id="totalXpDisplay">0</strong></div>
+    <div class="xp-add">
+      <input type="number" id="xpInput" min="1" placeholder="XP gained this session">
+      <button id="addXpBtn">Add XP</button>
+    </div>
+    <p style="font-size:0.78rem;color:#666;margin-top:0.55rem;">
+      XP scales with level and prestige. Every 4 levels → +1 Generate charge + milestone slot.
+    </p>
+  </div>
+
+  <div class="starter-bar" id="starterBar">
+    <div class="hint-text">Click cards to lock/unlock · Reroll unlocked · Finalize</div>
+    <button id="rerollBtn">Reroll Unlocked</button>
+    <button id="finalizeBtn">Finalize Draft</button>
+  </div>
+
+  <div class="cards" id="cards">
+    <p class="empty">Level up 4 times to unlock Generate, or use Starter Draft</p>
+  </div>
+
+  <div class="panel">
+    <h2>Milestone Reward Slots <span style="color:#666;font-weight:400;font-size:0.85rem;" id="slotCountLabel"></span></h2>
+    <p class="hint">Bank cards for later. Unlock slots every 4 levels &amp; on prestige. Empty = bank · Filled ✓ = claim.</p>
+    <div class="slots" id="milestoneSlots"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Picked so far</h2>
+    <div class="picked-list" id="pickedList"><span class="no-picked">Nothing picked yet</span></div>
+  </div>
+
+  <!-- Shared pick modal (manual / free / milestone) -->
+  <div class="modal-overlay" id="pickModal">
+    <div class="modal">
+      <header id="modalTitle">Choose an item</header>
+      <div class="body"><div class="list" id="pickList"></div></div>
+      <footer><button id="cancelPick">Cancel</button></footer>
+    </div>
+  </div>
+
+  <!-- Ban modal -->
+  <div class="modal-overlay" id="banModal">
+    <div class="modal">
+      <header>Ban Cards</header>
+      <div class="body">
+        <p style="font-size:0.82rem;color:#888;margin-bottom:0.75rem;">Full = never · Starter only · Generate only. Click ✕ to unban.</p>
+        <div class="ban-controls">
+          <select id="banCardSelect"></select>
+          <select id="banTypeSelect">
+            <option value="full">Full ban</option>
+            <option value="starter">Starter only</option>
+            <option value="generate">Generate only</option>
+          </select>
+          <button id="banAddBtn" style="background:#e17055;color:white;">Ban</button>
+        </div>
+        <div class="ban-list" id="banList"><span class="no-picked">No bans</span></div>
+      </div>
+      <footer><button id="banClose">Close</button></footer>
+    </div>
+  </div>
+
+  <!-- Custom random modal -->
+  <div class="modal-overlay" id="customModal">
+    <div class="modal">
+      <header>Custom Random Pick</header>
+      <div class="body">
+        <p style="font-size:0.82rem;color:#888;margin-bottom:0.6rem;">One option per line. Not saved. Clears after pick.</p>
+        <textarea id="customInput" placeholder="Template A&#10;Template B&#10;Template C"></textarea>
+        <button id="customPickBtn" style="background:#a29bfe;color:#1a1a2e;width:100%;justify-content:center;">Random Pick</button>
+        <div id="customResult" style="margin-top:0.75rem;font-size:1.05rem;color:#00cec9;font-weight:600;min-height:1.4rem;"></div>
+      </div>
+      <footer><button id="customClose">Close</button></footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  EDITABLE CONSTANTS
+// ============================================================
+const MASTER_LIST = [
+  "Mining","Lumberjacking","Blacksmith","Tinkering","Carpentry","Bowcraft",
+  "Option A","Option B","Option C","Option D","Option E","Option F","Free Pick"
+];
+const PREREQS = {
+  "Blacksmith": ["Mining"],
+  "Tinkering": ["Mining"],
+  "Carpentry": ["Lumberjacking"],
+  "Bowcraft": ["Lumberjacking"],
+};
+const WEIGHTED_CHANCE = 0.15;
+const MAX_MILESTONE_SLOTS = 5;
+const STARTER_COUNT = 4;
+const XP_BASE = 500;
+const PRESTIGE_GROWTH = 0.25;   // +25% per prestige
+const LEVEL_GROWTH = 0.08;      // +8% XP required per level within a prestige
+// ============================================================
+
+const STORAGE_KEY = "draftPickerState_v4";
+const FREE_PICK = "Free Pick";
+
+let state = {
+  remaining: [],
+  picked: [],
+  bans: {},
+  milestones: Array(MAX_MILESTONE_SLOTS).fill(null),
+  unlockedSlots: 0,
+  level: 1,
+  xp: 0,
+  totalXp: 0,
+  prestige: 0,
+  rerolls: 0,
+  generateCharges: 0,
+  levelsSinceReward: 0
+};
+
+let currentMode = null;
+let freePickCardEl = null;
+let starterMode = false;
+let starterCards = [];
+let generateCards = [];       // current generate-3 set
+let generateExclude = new Set(); // smart reroll: don't show these again this set
+
+const $ = id => document.getElementById(id);
+const cardsEl = $("cards");
+const toastEl = $("toast");
+const modal = $("pickModal");
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2400);
+}
+function hasPrereq(item) { return PREREQS[item] && PREREQS[item].length > 0; }
+function prereqsMet(item) {
+  if (!hasPrereq(item)) return true;
+  return PREREQS[item].some(req => state.picked.includes(req));
+}
+function isBanned(item, context) {
+  const b = state.bans[item];
+  if (!b) return false;
+  if (b === "full") return true;
+  if (context === "starter" && b === "starter") return true;
+  if (context === "generate" && b === "generate") return true;
+  if (context === "any") return true;
+  return false;
+}
+
+// XP scales with BOTH level and prestige
+// level 1 prestige 0 → 500
+// level 2 prestige 0 → 500 * 1.08
+// level 1 prestige 1 → 500 * 1.25
+// level 2 prestige 1 → 500 * 1.25 * 1.08
+function xpRequired() {
+  const prestigeMul = 1 + PRESTIGE_GROWTH * state.prestige;
+  const levelMul = 1 + LEVEL_GROWTH * (state.level - 1);
+  return Math.ceil(XP_BASE * prestigeMul * levelMul);
+}
+
+function buildPool(context, applyWeighting, excludeSet) {
+  const pool = [];
+  for (const item of state.remaining) {
+    if (context === "starter" && item === FREE_PICK) continue;
+    if (isBanned(item, context)) continue;
+    if (item !== FREE_PICK && !prereqsMet(item)) continue;
+    if (excludeSet && excludeSet.has(item)) continue;
+    const weighted = hasPrereq(item);
+    if (weighted && applyWeighting) {
+      if (Math.random() < WEIGHTED_CHANCE) pool.push({ name: item, weighted: true });
+    } else {
+      pool.push({ name: item, weighted: weighted && item !== FREE_PICK });
+    }
+  }
+  return pool;
+}
+
+function updateStatus() {
+  const realRem = state.remaining.filter(x => x !== FREE_PICK).length;
+  $("status").innerHTML =
+    `Remaining: <strong>${realRem}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong> · Generate charges: <strong>${state.generateCharges}</strong>`;
+
+  $("levelDisplay").textContent = state.level;
+  const need = xpRequired();
+  $("xpText").textContent = `${state.xp} / ${need} XP`;
+  $("xpBarFill").style.width = Math.min(100, (state.xp / need) * 100) + "%";
+  $("totalXpDisplay").textContent = state.totalXp.toLocaleString();
+
+  if (state.level >= 100) $("prestigeBtn").classList.add("show");
+  else $("prestigeBtn").classList.remove("show");
+
+  $("generate").disabled = state.generateCharges < 1;
+  $("slotCountLabel").textContent =
+    `(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+}
+
+function renderPicked() {
+  const el = $("pickedList");
+  if (!state.picked.length) {
+    el.innerHTML = `<span class="no-picked">Nothing picked yet</span>`;
+    return;
+  }
+  el.innerHTML = state.picked.map(item => `<span class="picked-item">${item}</span>`).join("");
+}
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.remaining) || !Array.isArray(data.picked)) return false;
+    state = Object.assign(state, data);
+    while (state.milestones.length < MAX_MILESTONE_SLOTS) state.milestones.push(null);
+    state.milestones = state.milestones.slice(0, MAX_MILESTONE_SLOTS);
+    if (typeof state.totalXp !== "number") state.totalXp = 0;
+    if (typeof state.generateCharges !== "number") state.generateCharges = 0;
+    return true;
+  } catch { return false; }
+}
+
+// ---------- Ban ----------
+function renderBanSelect() {
+  const options = MASTER_LIST.filter(c => c !== FREE_PICK && !state.bans[c]);
+  $("banCardSelect").innerHTML = options.length
+    ? options.map(c => `<option value="${c}">${c}</option>`).join("")
+    : `<option value="">(none)</option>`;
+}
+function renderBans() {
+  const entries = Object.entries(state.bans);
+  if (!entries.length) {
+    $("banList").innerHTML = `<span class="no-picked">No bans</span>`;
+    return;
+  }
+  $("banList").innerHTML = entries.map(([name, type]) =>
+    `<span class="ban-item">${name} <small style="opacity:0.7">(${type})</small><button data-unban="${name}">✕</button></span>`
+  ).join("");
+  $("banList").querySelectorAll("[data-unban]").forEach(btn => {
+    btn.onclick = () => {
+      delete state.bans[btn.dataset.unban];
+      save(); renderBans(); renderBanSelect(); showToast("Ban removed");
+    };
+  });
+}
+
+// ---------- Milestones ----------
+function unlockSlot() {
+  if (state.unlockedSlots >= MAX_MILESTONE_SLOTS) return false;
+  state.unlockedSlots += 1;
+  return true;
+}
+function renderMilestones() {
+  const el = $("milestoneSlots");
+  el.innerHTML = "";
+  for (let i = 0; i < MAX_MILESTONE_SLOTS; i++) {
+    const slot = document.createElement("div");
+    slot.className = "slot";
+    if (i >= state.unlockedSlots) {
+      slot.innerHTML = `<span class="empty-label">Locked</span>`;
+      slot.style.opacity = "0.4";
+      slot.style.cursor = "default";
+    } else if (state.milestones[i]) {
+      slot.classList.add("filled");
+      slot.innerHTML = `${state.milestones[i]} <button class="slot-remove" data-idx="${i}">✓</button>`;
+      slot.querySelector("button").onclick = (e) => { e.stopPropagation(); claimMilestone(i); };
+    } else {
+      slot.innerHTML = `<span class="empty-label">+ Bank card</span>`;
+      slot.onclick = () => openMilestonePicker(i);
+    }
+    el.appendChild(slot);
+  }
+  updateStatus();
+}
+function openMilestonePicker(slotIndex) {
+  const choices = state.remaining.filter(x => x !== FREE_PICK && !isBanned(x, "any"));
+  if (!choices.length) return showToast("No cards left to bank");
+  $("modalTitle").textContent = "Bank a card into this slot";
+  $("pickList").innerHTML = "";
+  choices.forEach(item => {
+    const btn = document.createElement("button");
+    btn.textContent = item;
+    btn.onclick = () => {
+      state.milestones[slotIndex] = item;
+      state.remaining = state.remaining.filter(x => x !== item);
+      closeModal(); save(); renderMilestones(); updateStatus(); showToast("Banked: " + item);
+    };
+    $("pickList").appendChild(btn);
+  });
+  modal.classList.add("open");
+}
+function claimMilestone(idx) {
+  const name = state.milestones[idx];
+  if (!name) return;
+  if (!state.picked.includes(name)) state.picked.push(name);
+  state.milestones[idx] = null;
+  save(); renderMilestones(); renderPicked(); updateStatus(); showToast("Claimed: " + name);
+}
+
+// ---------- XP / Level ----------
+function addXP() {
+  const amount = Math.max(0, parseInt($("xpInput").value, 10) || 0);
+  if (amount <= 0) return showToast("Enter XP amount");
+  $("xpInput").value = "";
+  state.xp += amount;
+  state.totalXp += amount;
+  let leveled = 0;
+  while (state.level < 100 && state.xp >= xpRequired()) {
+    state.xp -= xpRequired();
+    state.level += 1;
+    leveled += 1;
+    state.levelsSinceReward += 1;
+    if (state.levelsSinceReward >= 4) {
+      state.levelsSinceReward = 0;
+      state.generateCharges += 1;
+      const slotMsg = unlockSlot() ? " + milestone slot" : "";
+      showToast(`Level ${state.level}! +1 Generate charge${slotMsg}`);
+    }
+  }
+  if (state.level >= 100) {
+    state.xp = 0;
+    $("prestigeBtn").classList.add("show");
+  }
+  save(); updateStatus(); renderMilestones();
+  if (leveled && state.levelsSinceReward !== 0) showToast(`+${amount} XP · +${leveled} level(s)`);
+  else if (!leveled) showToast(`+${amount} XP`);
+}
+
+function doPrestige() {
+  if (state.level < 100) return;
+  if (!confirm("Prestige?\n• Level → 1\n• +5 rerolls\n• Soft-reset drafted cards\n• Keeps milestones & bans")) return;
+  state.picked.forEach(c => {
+    if (!state.remaining.includes(c) && c !== FREE_PICK) state.remaining.push(c);
+  });
+  if (MASTER_LIST.includes(FREE_PICK) && !state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked = [];
+  state.level = 1;
+  state.xp = 0;
+  state.prestige += 1;
+  state.rerolls += 5;
+  state.levelsSinceReward = 0;
+  state.generateCharges = 0;
+  unlockSlot();
+  exitStarterMode();
+  generateCards = [];
+  save(); updateStatus(); renderPicked(); renderMilestones();
+  cardsEl.innerHTML = `<p class="empty">Prestiged! Level 1 · +5 rerolls</p>`;
+  showToast("Prestige #" + state.prestige);
+}
+
+function deathReset() {
+  if (!confirm("Death Reset?\nReturns drafted cards to pool.\nKeeps milestones, levels, prestige, bans, rerolls, generate charges.")) return;
+  state.picked.forEach(c => { if (!state.remaining.includes(c)) state.remaining.push(c); });
+  if (MASTER_LIST.includes(FREE_PICK) && !state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked = [];
+  exitStarterMode();
+  generateCards = [];
+  save(); updateStatus(); renderPicked();
+  cardsEl.innerHTML = `<p class="empty">Death reset done.</p>`;
+  showToast("Death reset");
+}
+
+function fullReset() {
+  if (!confirm("FULL RESET? Wipes everything.")) return;
+  state = {
+    remaining: [...MASTER_LIST], picked: [], bans: {},
+    milestones: Array(MAX_MILESTONE_SLOTS).fill(null),
+    unlockedSlots: 0, level: 1, xp: 0, totalXp: 0, prestige: 0,
+    rerolls: 0, generateCharges: 0, levelsSinceReward: 0
+  };
+  exitStarterMode();
+  generateCards = [];
+  localStorage.removeItem(STORAGE_KEY);
+  save();
+  updateStatus(); renderPicked(); renderBans(); renderBanSelect(); renderMilestones();
+  cardsEl.innerHTML = `<p class="empty">Full reset.</p>`;
+  showToast("Full reset");
+}
+
+// ---------- Modals ----------
+function openPickModal(mode) {
+  currentMode = mode;
+  const choices = state.remaining.filter(x => x !== FREE_PICK && !isBanned(x, "any") && prereqsMet(x));
+  if (!choices.length) return showToast("No items available");
+  $("modalTitle").textContent = mode === "free" ? "Free Pick" : "Manual Pick";
+  $("pickList").innerHTML = "";
+  choices.forEach(item => {
+    const btn = document.createElement("button");
+    btn.textContent = item + (hasPrereq(item) ? " ★" : "");
+    btn.onclick = () => finalizePick(item);
+    $("pickList").appendChild(btn);
+  });
+  modal.classList.add("open");
+}
+function finalizePick(item) {
+  state.remaining = state.remaining.filter(x => x !== item);
+  if (!state.picked.includes(item)) state.picked.push(item);
+  if (currentMode === "free" && freePickCardEl) {
+    document.querySelectorAll(".card").forEach(c => {
+      c.classList.remove("selected");
+      c.style.pointerEvents = "none";
+    });
+    freePickCardEl.classList.add("selected");
+    freePickCardEl.querySelector(".hint").textContent = "Locked in";
+    freePickCardEl.querySelector(".name").textContent = item;
+  }
+  closeModal();
+  save(); updateStatus(); renderPicked();
+  showToast(currentMode === "free" ? "Free Pick → " + item : "Added: " + item);
+}
+function closeModal() {
+  modal.classList.remove("open");
+  currentMode = null;
+  freePickCardEl = null;
+}
+
+// ---------- Generate 3 (gated + per-card smart reroll) ----------
+function generate() {
+  if (state.generateCharges < 1) return showToast("Need a Generate charge (every 4 levels)");
+  exitStarterMode();
+  state.generateCharges -= 1;
+  generateExclude = new Set();
+  const pool = buildPool("generate", true, generateExclude);
+  if (!pool.length) {
+    state.generateCharges += 1; // refund
+    cardsEl.innerHTML = `<p class="empty">No available cards.</p>`;
+    save(); updateStatus();
+    return;
+  }
+  generateCards = shuffle(pool).slice(0, Math.min(3, pool.length));
+  generateCards.forEach(c => generateExclude.add(c.name));
+  save();
+  updateStatus();
+  renderGenerateCards();
+}
+
+function renderGenerateCards() {
+  cardsEl.innerHTML = "";
+  generateCards.forEach((entry, index) => {
+    const item = entry.name;
+    let cls = "card" + (item === FREE_PICK ? " freepick" : "") + (entry.weighted ? " weighted" : "");
+    const card = document.createElement("div");
+    card.className = cls;
+    card.innerHTML = `
+      ${entry.weighted ? '<div class="badge">Weighted</div>' : ''}
+      <div class="number">#${index + 1}</div>
+      <div class="name">${item}</div>
+      <div class="hint">${item === FREE_PICK ? "Click to choose freely" : "Click to lock in"}</div>
+      <button class="reroll-one" data-idx="${index}" ${state.rerolls < 1 ? "disabled" : ""}>Reroll (1 token)</button>
+    `;
+    card.querySelector(".name").parentElement?.querySelector(".hint");
+    // Click card body to select (not the reroll button)
+    card.addEventListener("click", (e) => {
+      if (e.target.classList.contains("reroll-one")) return;
+      if (item === FREE_PICK) {
+        freePickCardEl = card;
+        openPickModal("free");
+      } else {
+        selectItem(item, card);
+      }
+    });
+    card.querySelector(".reroll-one").onclick = (e) => {
+      e.stopPropagation();
+      rerollOneGenerate(index);
+    };
+    cardsEl.appendChild(card);
+  });
+}
+
+function rerollOneGenerate(idx) {
+  if (state.rerolls < 1) return showToast("No reroll tokens");
+  const old = generateCards[idx].name;
+  // Smart: exclude all currently shown + already excluded this set
+  const exclude = new Set(generateExclude);
+  generateCards.forEach(c => exclude.add(c.name));
+
+  const pool = buildPool("generate", true, exclude);
+  if (!pool.length) return showToast("No other cards available to reroll into");
+
+  const next = shuffle(pool)[0];
+  generateCards[idx] = next;
+  generateExclude.add(next.name);
+  state.rerolls -= 1;
+  save();
+  updateStatus();
+  renderGenerateCards();
+  showToast(`Rerolled ${old} → ${next.name}`);
+}
+
+function selectItem(item, cardEl) {
+  if (cardEl.classList.contains("selected")) return;
+  document.querySelectorAll(".card").forEach(c => {
+    c.classList.remove("selected");
+    c.style.pointerEvents = "none";
+  });
+  cardEl.classList.add("selected");
+  const hint = cardEl.querySelector(".hint");
+  if (hint) hint.textContent = "Locked in";
+  const rb = cardEl.querySelector(".reroll-one");
+  if (rb) rb.remove();
+  state.remaining = state.remaining.filter(x => x !== item);
+  if (!state.picked.includes(item)) state.picked.push(item);
+  generateCards = [];
+  save(); updateStatus(); renderPicked();
+  showToast("Locked: " + item);
+}
+
+// ---------- Starter ----------
+function exitStarterMode() {
+  starterMode = false;
+  starterCards = [];
+  $("starterBar").classList.remove("active");
+}
+function startStarter() {
+  starterMode = true;
+  generateCards = [];
+  $("starterBar").classList.add("active");
+  starterCards = [];
+  drawStarter(true);
+}
+function drawStarter(full) {
+  const pool = buildPool("starter", true, null);
+  const lockedNames = starterCards.filter(c => c.locked).map(c => c.name);
+  const available = pool.filter(p => !lockedNames.includes(p.name));
+  if (full) {
+    starterCards = shuffle(available).slice(0, Math.min(STARTER_COUNT, available.length))
+      .map(p => ({ name: p.name, locked: false, weighted: p.weighted }));
+  } else {
+    const unlockedCount = starterCards.filter(c => !c.locked).length;
+    const newDraws = shuffle(available).slice(0, unlockedCount);
+    let i = 0;
+    starterCards = starterCards.map(c => {
+      if (c.locked) return c;
+      if (i < newDraws.length) {
+        const n = newDraws[i++];
+        return { name: n.name, locked: false, weighted: n.weighted };
+      }
+      return c;
+    });
+  }
+  renderStarter();
+}
+function renderStarter() {
+  cardsEl.innerHTML = "";
+  if (!starterCards.length) {
+    cardsEl.innerHTML = `<p class="empty">No cards available for starter.</p>`;
+    return;
+  }
+  starterCards.forEach((entry, index) => {
+    const card = document.createElement("div");
+    card.className = "card" + (entry.locked ? " locked" : "") + (entry.weighted ? " weighted" : "");
+    card.innerHTML = `
+      ${entry.weighted ? '<div class="badge">Weighted</div>' : ''}
+      <div class="number">#${index + 1}</div>
+      <div class="name">${entry.name}</div>
+      <div class="hint">${entry.locked ? "Locked — click to unlock" : "Click to lock"}</div>
+    `;
+    card.onclick = () => { entry.locked = !entry.locked; renderStarter(); };
+    cardsEl.appendChild(card);
+  });
+}
+function rerollUnlocked() {
+  if (!starterMode) return;
+  if (!starterCards.some(c => !c.locked)) return showToast("Unlock at least one card to reroll");
+  if (state.rerolls > 0) {
+    state.rerolls -= 1;
+    save(); updateStatus();
+    showToast("Rerolled (−1 token)");
+  } else {
+    showToast("Rerolled");
+  }
+  drawStarter(false);
+}
+function finalizeStarter() {
+  if (!starterMode || !starterCards.length) return;
+  const names = starterCards.map(c => c.name);
+  names.forEach(name => {
+    if (!state.picked.includes(name)) state.picked.push(name);
+    state.remaining = state.remaining.filter(x => x !== name);
+  });
+  exitStarterMode();
+  cardsEl.innerHTML = `<p class="empty">Finalized! ${names.length} card(s) added.</p>`;
+  save(); updateStatus(); renderPicked();
+  showToast("Finalized: " + names.join(", "));
+}
+
+// ---------- Custom ----------
+function doCustomPick() {
+  const lines = $("customInput").value.split("\n").map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return showToast("Type at least one option");
+  const chosen = lines[Math.floor(Math.random() * lines.length)];
+  $("customResult").textContent = "→ " + chosen;
+  $("customInput").value = "";
+  showToast("Custom: " + chosen);
+}
+
+// ---------- Export / Import ----------
+function exportSave() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "draft-save.json";
+  a.click();
+  showToast("Exported");
+}
+function importSave(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data.remaining) || !Array.isArray(data.picked)) throw new Error();
+      state = Object.assign(state, data);
+      while (state.milestones.length < MAX_MILESTONE_SLOTS) state.milestones.push(null);
+      state.milestones = state.milestones.slice(0, MAX_MILESTONE_SLOTS);
+      if (typeof state.totalXp !== "number") state.totalXp = 0;
+      if (typeof state.generateCharges !== "number") state.generateCharges = 0;
+      exitStarterMode();
+      generateCards = [];
+      save();
+      renderAll();
+      showToast("Imported");
+    } catch { showToast("Invalid save file"); }
+  };
+  reader.readAsText(file);
+}
+
+function renderAll() {
+  updateStatus();
+  renderPicked();
+  renderBans();
+  renderBanSelect();
+  renderMilestones();
+}
+
+// Events
+$("starterBtn").onclick = startStarter;
+$("generate").onclick = generate;
+$("manualPick").onclick = () => openPickModal("manual");
+$("banBtn").onclick = () => { renderBanSelect(); renderBans(); $("banModal").classList.add("open"); };
+$("banClose").onclick = () => $("banModal").classList.remove("open");
+$("banModal").onclick = (e) => { if (e.target === $("banModal")) $("banModal").classList.remove("open"); };
+$("customBtn").onclick = () => { $("customResult").textContent = ""; $("customModal").classList.add("open"); };
+$("customClose").onclick = () => $("customModal").classList.remove("open");
+$("customModal").onclick = (e) => { if (e.target === $("customModal")) $("customModal").classList.remove("open"); };
+$("export").onclick = exportSave;
+$("import").onchange = (e) => {
+  if (e.target.files[0]) { importSave(e.target.files[0]); e.target.value = ""; }
+};
+$("deathReset").onclick = deathReset;
+$("reset").onclick = fullReset;
+$("prestigeBtn").onclick = doPrestige;
+$("addXpBtn").onclick = addXP;
+$("rerollBtn").onclick = rerollUnlocked;
+$("finalizeBtn").onclick = finalizeStarter;
+$("cancelPick").onclick = closeModal;
+modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+$("customPickBtn").onclick = doCustomPick;
+$("banAddBtn").onclick = () => {
+  const name = $("banCardSelect").value;
+  const type = $("banTypeSelect").value;
+  if (!name) return;
+  state.bans[name] = type;
+  save(); renderBans(); renderBanSelect();
+  showToast("Banned " + name + " (" + type + ")");
+};
+
+if (!load()) {
+  state.remaining = [...MASTER_LIST];
+  state.milestones = Array(MAX_MILESTONE_SLOTS).fill(null);
+}
+if (MASTER_LIST.includes(FREE_PICK) && !state.remaining.includes(FREE_PICK) && !state.picked.includes(FREE_PICK)) {
+  state.remaining.push(FREE_PICK);
+}
+renderAll();
+</script>
+</body>
+</html>
