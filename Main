@@ -232,7 +232,7 @@
       <button id="addXpBtn">Add XP</button>
     </div>
     <p style="font-size:0.78rem;color:#666;margin-top:0.55rem;">
-      XP scales with level and prestige. Every 4 levels → +1 Generate charge + milestone slot.
+      XP scales with level and prestige. Every 4 levels → +1 Generate charge. Milestone slots unlock per prestige (1 each).
     </p>
   </div>
 
@@ -248,7 +248,7 @@
 
   <div class="panel">
     <h2>Milestone Reward Slots <span style="color:#666;font-weight:400;font-size:0.85rem;" id="slotCountLabel"></span></h2>
-    <p class="hint">Bank cards for later. Unlock slots every 4 levels &amp; on prestige. Empty = bank · Filled ✓ = claim.</p>
+    <p class="hint">Bank cards for later. Slots unlock with prestige (P1=1 slot, P2=2…). Empty = bank · Filled ✓ = claim.</p>
     <div class="slots" id="milestoneSlots"></div>
   </div>
 
@@ -308,14 +308,70 @@
 //  EDITABLE CONSTANTS
 // ============================================================
 const MASTER_LIST = [
-  "Mining","Lumberjacking","Blacksmith","Tinkering","Carpentry","Bowcraft",
-  "Option A","Option B","Option C","Option D","Option E","Option F","Free Pick"
+"Alchemy", 
+"Anatomy", 
+"Druidism", 
+"Mercantile", 
+"ArmsLore", 
+"Parry", 
+"Begging", 
+"Blacksmith", 
+"Bowcraft", 
+"Peacemaking", 
+"Camping", 
+"Carpentry", 
+"Cartography", 
+"Cooking", 
+"Searching", 
+"Discordance", 
+"Psychology", 
+"Healing", 
+"Seafaring", 
+"Forensics", 
+"Herding", 
+"Hiding", 
+"Provocation", 
+"Inscribe", 
+"Lockpicking", 
+"Magery", 
+"MagicResist", 
+"Tactics", 
+"Snooping", 
+"Musicianship", 
+"Poisoning", 
+"Marksmanship", 
+"Spiritualism", 
+"Stealing", 
+"Tailoring", 
+"Taming", 
+"Tasting", 
+"Tinkering", 
+"Tracking", 
+"Veterinary", 
+"Swords", 
+"Bludgeoning", 
+"Fencing", 
+"FistFighting", 
+"Lumberjacking", 
+"Mining", 
+"Meditation", 
+"Stealth", 
+"RemoveTrap", 
+"Necromancy", 
+"Focus", 
+"Knightship", 
+"Bushido", 
+"Ninjitsu", 
+"Elementalism", 
+"Free Pick"
 ];
 const PREREQS = {
   "Blacksmith": ["Mining"],
   "Tinkering": ["Mining"],
   "Carpentry": ["Lumberjacking"],
   "Bowcraft": ["Lumberjacking"],
+  "Magery": ["Psychology"],
+  "Necromancy": ["Spiritualism"],
 };
 const WEIGHTED_CHANCE = 0.15;
 const MAX_MILESTONE_SLOTS = 5;
@@ -481,12 +537,12 @@ function renderBans() {
 }
 
 // ---------- Milestones ----------
-function unlockSlot() {
-  if (state.unlockedSlots >= MAX_MILESTONE_SLOTS) return false;
-  state.unlockedSlots += 1;
-  return true;
+function syncMilestoneSlots() {
+  // Prestige 0 = 0 slots, 1 = 1 slot, ... capped at MAX
+  state.unlockedSlots = Math.min(state.prestige, MAX_MILESTONE_SLOTS);
 }
 function renderMilestones() {
+  syncMilestoneSlots();
   const el = $("milestoneSlots");
   el.innerHTML = "";
   for (let i = 0; i < MAX_MILESTONE_SLOTS; i++) {
@@ -549,8 +605,7 @@ function addXP() {
     if (state.levelsSinceReward >= 4) {
       state.levelsSinceReward = 0;
       state.generateCharges += 1;
-      const slotMsg = unlockSlot() ? " + milestone slot" : "";
-      showToast(`Level ${state.level}! +1 Generate charge${slotMsg}`);
+      showToast(`Level ${state.level}! +1 Generate charge`);
     }
   }
   if (state.level >= 100) {
@@ -576,7 +631,7 @@ function doPrestige() {
   state.rerolls += 5;
   state.levelsSinceReward = 0;
   state.generateCharges = 0;
-  unlockSlot();
+  syncMilestoneSlots();
   exitStarterMode();
   generateCards = [];
   save(); updateStatus(); renderPicked(); renderMilestones();
