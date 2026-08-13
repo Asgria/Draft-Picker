@@ -308,70 +308,14 @@
 //  EDITABLE CONSTANTS
 // ============================================================
 const MASTER_LIST = [
-"Alchemy", 
-"Anatomy", 
-"Druidism", 
-"Mercantile", 
-"ArmsLore", 
-"Parry", 
-"Begging", 
-"Blacksmith", 
-"Bowcraft", 
-"Peacemaking", 
-"Camping", 
-"Carpentry", 
-"Cartography", 
-"Cooking", 
-"Searching", 
-"Discordance", 
-"Psychology", 
-"Healing", 
-"Seafaring", 
-"Forensics", 
-"Herding", 
-"Hiding", 
-"Provocation", 
-"Inscribe", 
-"Lockpicking", 
-"Magery", 
-"MagicResist", 
-"Tactics", 
-"Snooping", 
-"Musicianship", 
-"Poisoning", 
-"Marksmanship", 
-"Spiritualism", 
-"Stealing", 
-"Tailoring", 
-"Taming", 
-"Tasting", 
-"Tinkering", 
-"Tracking", 
-"Veterinary", 
-"Swords", 
-"Bludgeoning", 
-"Fencing", 
-"FistFighting", 
-"Lumberjacking", 
-"Mining", 
-"Meditation", 
-"Stealth", 
-"RemoveTrap", 
-"Necromancy", 
-"Focus", 
-"Knightship", 
-"Bushido", 
-"Ninjitsu", 
-"Elementalism", 
-"Free Pick"
+  "Mining","Lumberjacking","Blacksmith","Tinkering","Carpentry","Bowcraft",
+  "Option A","Option B","Option C","Option D","Option E","Option F","Free Pick"
 ];
 const PREREQS = {
   "Blacksmith": ["Mining"],
   "Tinkering": ["Mining"],
   "Carpentry": ["Lumberjacking"],
   "Bowcraft": ["Lumberjacking"],
-  "Magery": ["Psychology"],
-  "Necromancy": ["Spiritualism"],
 };
 const WEIGHTED_CHANCE = 0.15;
 const MAX_MILESTONE_SLOTS = 5;
@@ -640,15 +584,18 @@ function doPrestige() {
 }
 
 function deathReset() {
-  if (!confirm("Death Reset?\nReturns drafted cards to pool.\nKeeps milestones, levels, prestige, bans, rerolls, generate charges.")) return;
+  if (!confirm("Death Reset?\nReturns drafted cards to pool and restores Generate charges from your current level.\nKeeps milestones, levels, prestige, bans, rerolls.")) return;
   state.picked.forEach(c => { if (!state.remaining.includes(c)) state.remaining.push(c); });
   if (MASTER_LIST.includes(FREE_PICK) && !state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
   state.picked = [];
+  // Restore generate charges based on level (every 4 levels = 1 charge)
+  state.generateCharges = Math.floor(state.level / 4);
+  state.levelsSinceReward = state.level % 4;
   exitStarterMode();
   generateCards = [];
   save(); updateStatus(); renderPicked();
-  cardsEl.innerHTML = `<p class="empty">Death reset done.</p>`;
-  showToast("Death reset");
+  cardsEl.innerHTML = `<p class="empty">Death reset done. Generate charges restored.</p>`;
+  showToast("Death reset · Generate charges restored");
 }
 
 function fullReset() {
