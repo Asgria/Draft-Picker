@@ -1,149 +1,873 @@
-# Random Draft Picker — Edit Guide
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Draft Picker</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f13;color:#e8e8ed;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem 3.5rem}
+    h1{font-size:1.8rem;margin-bottom:.3rem;letter-spacing:-.02em}
+    p.sub{color:#888;margin-bottom:1.3rem;font-size:.9rem;text-align:center;max-width:560px;line-height:1.45}
+    .controls{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem}
+    button,label.file-btn{border:none;padding:.6rem 1rem;font-size:.85rem;font-weight:600;border-radius:10px;cursor:pointer;transition:background .2s,transform .15s,opacity .2s;display:inline-flex;align-items:center}
+    button:active,label.file-btn:active{transform:translateY(1px)}
+    button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    #generate{background:#6c5ce7;color:#fff}
+    #generate:hover:not(:disabled){background:#5a4bd1}
+    #generateItem{background:#9b59b6;color:#fff;display:none}
+    #generateItem.show{display:inline-flex}
+    #generateItem:hover:not(:disabled){background:#8e44ad}
+    #starterBtn{background:#0984e3;color:#fff}
+    #starterBtn:hover:not(:disabled){background:#0770c2}
+    #manualPick{background:#e17055;color:#fff}
+    #manualPick:hover:not(:disabled){background:#d16045}
+    #banBtn{background:#636e72;color:#fff}
+    #banBtn:hover{background:#555f63}
+    #modBtn{background:#2d3436;color:#dfe6e9;border:1px solid #636e72}
+    #modBtn:hover{background:#3d4548}
+    #customBtn{background:#a29bfe;color:#1a1a2e}
+    #customBtn:hover{background:#8b83e8}
+    #export{background:#00b894;color:#fff}
+    #export:hover{background:#00a884}
+    #reset{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
+    #reset:hover{background:#3a3a48;color:#fff}
+    #deathReset{background:#5c2a2a;color:#f88;border:1px solid #833}
+    #deathReset:hover{background:#6e3333}
+    #prestigeBtn{background:#f1c40f;color:#1a1a2e;display:none}
+    #prestigeBtn:hover{background:#e0b40a}
+    #prestigeBtn.show{display:inline-flex}
+    #rerollBtn{background:#fdcb6e;color:#1a1a2e}
+    #finalizeBtn{background:#00cec9;color:#0a1a1a}
+    #confirmLockBtn{background:#00cec9;color:#0a1a1a;}
+    label.file-btn{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
+    label.file-btn:hover{background:#3a3a48;color:#fff}
+    input[type=file]{display:none}
+    .status{font-size:.86rem;color:#777;margin-bottom:.85rem;text-align:center;line-height:1.6}
+    .status strong{color:#aaa}
+    .xp-panel{width:100%;max-width:520px;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.1rem}
+    .xp-panel h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
+    .xp-row{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.3rem}
+    .xp-bar{height:10px;background:#1c1c24;border-radius:5px;overflow:hidden;margin-bottom:.35rem}
+    .xp-bar>div{height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:5px;transition:width .3s}
+    .total-xp{font-size:.8rem;color:#666;margin-bottom:.65rem}
+    .total-xp strong{color:#888}
+    .xp-add{display:flex;gap:.5rem;align-items:center}
+    .xp-add input{flex:1;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.45rem .6rem;border-radius:8px;font-size:.9rem}
+    .xp-add button{background:#6c5ce7;color:#fff;padding:.45rem .9rem}
+    .starter-bar{display:none;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem;padding:.65rem 1rem;background:#16161d;border:1px solid #2a2a35;border-radius:12px;width:100%;max-width:620px}
+    .starter-bar.active{display:flex}
+    .starter-bar .hint-text{width:100%;text-align:center;font-size:.8rem;color:#888;margin-bottom:.15rem}
+    .cards{display:flex;flex-wrap:wrap;gap:1.1rem;justify-content:center;max-width:980px;width:100%;min-height:130px}
+    .card{background:#1c1c24;border:1px solid #2a2a35;border-radius:16px;padding:1.3rem 1.1rem 1rem;width:220px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;position:relative}
+    .card:hover{border-color:#6c5ce7;transform:translateY(-3px);box-shadow:0 8px 20px rgba(108,92,231,.15)}
+    .card.pending{border-color:#74b9ff;box-shadow:0 0 0 2px #74b9ff}
+    .card.selected{border-color:#00cec9;box-shadow:0 0 0 2px #00cec9;pointer-events:none}
+    .card.locked{border-color:#00cec9;box-shadow:0 0 0 2px #00cec9;background:#152525}
+    .card.locked .hint{color:#00cec9}
+    .card.freepick{border-color:#fdcb6e;background:#1f1c16}
+    .card.weighted{border-color:#f1c40f;background:linear-gradient(145deg,#2a2410,#1c1c24);box-shadow:0 0 12px rgba(241,196,15,.45);animation:goldPulse 2.2s ease-in-out infinite}
+    @keyframes goldPulse{0%,100%{box-shadow:0 0 12px rgba(241,196,15,.4)}50%{box-shadow:0 0 18px rgba(241,196,15,.7)}}
+    .card .badge{position:absolute;top:8px;right:10px;font-size:.65rem;font-weight:700;color:#f1c40f;text-transform:uppercase}
+    .card .number{position:absolute;top:10px;left:12px;font-size:.75rem;color:#666;font-weight:600}
+    .card .name{font-size:1.08rem;font-weight:600;margin:.35rem 0;line-height:1.3}
+    .card .hint{font-size:.78rem;color:#666}
+    .card .reroll-one{margin-top:.5rem;background:#2d2d38;color:#fdcb6e;border:1px solid #4a4030;padding:.3rem .6rem;font-size:.75rem;border-radius:6px;width:100%}
+    .card .reroll-one:disabled{opacity:.35}
+    .empty{color:#555;font-style:italic;width:100%;text-align:center;padding:1.5rem 0}
+    .panel{width:100%;max-width:700px;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:1.05rem 1.2rem;margin-top:1.5rem}
+    .panel h2{font-size:1.05rem;color:#aaa;margin-bottom:.65rem;font-weight:600}
+    .panel .hint{font-size:.8rem;color:#666;margin-bottom:.65rem}
+    .slots{display:flex;flex-wrap:wrap;gap:.5rem}
+    .slot{min-width:110px;min-height:52px;background:#1c1c24;border:1px dashed #3d3d4a;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:.4rem .6rem;font-size:.85rem;cursor:pointer;text-align:center}
+    .slot:hover{border-color:#6c5ce7}
+    .slot.filled{border-style:solid;border-color:#00cec9;color:#00cec9;background:#1a2a28}
+    .slot.empty-label{color:#555;font-size:.78rem}
+    .picked-list{display:flex;flex-wrap:wrap;gap:.45rem}
+    .picked-item{background:#1a2a28;border:1px solid #1e4a44;color:#00cec9;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;font-weight:500}
+    .ban-item{background:#2a1a1a;border:1px solid #5a2a2a;color:#f88;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;display:inline-flex;align-items:center;gap:.4rem}
+    .ban-item button,.slot-remove{background:transparent;border:none;color:inherit;cursor:pointer;font-size:.85rem;padding:0;opacity:.7}
+    .no-picked{color:#555;font-size:.9rem;font-style:italic}
+    .ban-list{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.55rem}
+    .ban-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;align-items:center}
+    .ban-controls select{background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem .55rem;border-radius:8px;font-size:.85rem}
+    .mod-row{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.75rem;font-size:.9rem}
+    .mod-row input[type=checkbox]{margin-top:.2rem;width:16px;height:16px;accent-color:#6c5ce7}
+    .mod-row input[type=number]{width:70px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.3rem .45rem;border-radius:6px;font-size:.85rem}
+    .mod-row .sub{font-size:.78rem;color:#666;margin-top:.15rem}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+    .modal-overlay.open{display:flex}
+    .modal{background:#1c1c24;border:1px solid #3d3d4a;border-radius:16px;width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+    .modal header{padding:1rem 1.15rem;border-bottom:1px solid #2a2a35;font-weight:600;font-size:1.05rem}
+    .modal .body{padding:1rem 1.15rem;overflow-y:auto;flex:1}
+    .modal .list{display:flex;flex-direction:column;gap:.35rem}
+    .modal .list button{background:#252530;color:#e8e8ed;border:1px solid #333;text-align:left;padding:.6rem .9rem;border-radius:8px;font-size:.9rem;width:100%}
+    .modal .list button:hover{background:#6c5ce7;border-color:#6c5ce7}
+    .modal footer{padding:.75rem 1.15rem;border-top:1px solid #2a2a35;display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}
+    .modal footer button{background:transparent;color:#888;border:1px solid #3d3d4a;padding:.45rem .9rem;font-size:.85rem}
+    .modal footer button.primary{background:#6c5ce7;color:#fff;border-color:#6c5ce7}
+    .modal textarea{width:100%;min-height:110px;background:#16161d;border:1px solid #333;border-radius:10px;color:#e8e8ed;padding:.65rem;font-size:.92rem;resize:vertical;font-family:inherit;margin-bottom:.65rem}
+    .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1c24;border:1px solid #3d3d4a;color:#e8e8ed;padding:.65rem 1.2rem;border-radius:10px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #confirmBar button{border:none;border-radius:10px;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h1>Random Draft Picker</h1>
+  <p class="sub">Generate charges from leveling · Confirm to lock · Modifiers control rules<br>Starter = lock / reroll / finalize · Golden = weighted prereq card</p>
+  <div class="controls">
+    <button id="starterBtn">Starter Draft</button>
+    <button id="generate">Generate 3 Skills</button>
+    <button id="generateItem">Generate 3 Items</button>
+    <button id="manualPick">Manual Pick</button>
+    <button id="banBtn">Ban Cards</button>
+    <button id="modBtn">Modifiers</button>
+    <button id="customBtn">Custom Random</button>
+    <button id="export">Export Save</button>
+    <label class="file-btn">Import Save<input type="file" id="import" accept=".json,application/json"></label>
+    <button id="deathReset">Death Reset</button>
+    <button id="reset">Full Reset</button>
+    <button id="prestigeBtn">Prestige</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div class="xp-panel">
+    <h2>Level &amp; Experience</h2>
+    <div class="xp-row"><span>Level <strong id="levelDisplay">1</strong> / 100</span><span id="xpText">0 / 500 XP</span></div>
+    <div class="xp-bar"><div id="xpBarFill" style="width:0%"></div></div>
+    <div class="total-xp">Total XP earned: <strong id="totalXpDisplay">0</strong></div>
+    <div class="xp-add">
+      <input type="number" id="xpInput" min="1" placeholder="XP gained this session">
+      <button id="addXpBtn">Add XP</button>
+    </div>
+    <p style="font-size:.78rem;color:#666;margin-top:.5rem">XP scales with level &amp; prestige. Generate charges from leveling (interval set in Modifiers).</p>
+  </div>
+  <div class="starter-bar" id="starterBar">
+    <div class="hint-text">Click cards to lock/unlock · Reroll unlocked · Finalize</div>
+    <button id="rerollBtn">Reroll Unlocked</button>
+    <button id="finalizeBtn">Finalize Draft</button>
+  </div>
+  <div class="cards" id="cards"><p class="empty">Use Starter Draft, or earn Generate charges by leveling</p></div>
+  <div id="confirmBar" style="display:none;width:100%;max-width:700px;margin:1.1rem auto 0;text-align:center;position:relative;z-index:5;">
+    <button id="confirmLockBtn" type="button" style="background:#00cec9;color:#0a1a1a;padding:.7rem 1.6rem;font-size:1rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,206,201,.35);">Confirm Selection</button>
+  </div>
 
-Single-file app: `draft-picker.html`. Open it in a browser. Progress saves in `localStorage` (export JSON to share).
+  </div>
+  <div class="panel">
+    <h2>Milestone RewardSlots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
+    <p class="hint">Slots unlock with prestige (P1=1, P2=2…). Empty = bank · Filled ✓ = claim.</p>
+    <div class="slots" id="milestoneSlots"></div>
+  </div>
+  <div class="panel">
+    <h2>Picked so far</h2>
+    <div class="picked-list" id="pickedList"><span class="no-picked">Nothing picked yet</span></div>
+  </div>
 
----
+  <div class="panel" id="toolsPanel">
+    <h2>Tools</h2>
+    <p class="hint">Quick fixes for testing / recovery. More tools can go here later.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+      <button id="editBtn" style="background:#636e72;color:#fff;">Edit Values</button>
+    </div>
+  </div>
 
-## Where to edit (top of `<script>`)
+  <div class="modal-overlay" id="editModal"><div class="modal"><header>Edit Values</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.75rem;">Adjust live state (saved immediately on Apply).</p>
+    <div class="mod-row"><div style="flex:1"><strong>Generate charges</strong><div class="sub">Set exactly how many you have</div>
+      <input type="number" id="editCharges" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Charges spent (tracking)</strong><div class="sub">Used for refresh math — lower this if refresh under-counts</div>
+      <input type="number" id="editChargesSpent" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Level</strong>
+      <input type="number" id="editLevel" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Current XP (toward next level)</strong>
+      <input type="number" id="editXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Total XP earned</strong>
+      <input type="number" id="editTotalXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Reroll tokens</strong>
+      <input type="number" id="editRerolls" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Prestige count</strong>
+      <input type="number" id="editPrestige" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Starter rerolls used</strong>
+      <input type="number" id="editStarterUses" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <button id="editApply" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-top:.5rem;">Apply Changes</button>
+  </div><footer><button id="editClose">Close</button></footer></div></div>
 
-| Constant | Purpose |
-|----------|---------|
-| `MASTER_LIST` | Skill cards + `"Free Pick"` |
-| `PREREQS` | Skill gates, e.g. `"Blacksmith": ["Mining"]` |
-| `ITEM_PACKS` | Named packs → list of items inside |
-| `ITEM_LOOSE` | Standalone item entries (both packed & unpacked modes) |
-| `WEIGHTED_CHANCE` | Chance for prereq-gated skills to appear (default `0.15`) |
-| `MAX_MILESTONE_SLOTS` | Max bank slots (unlock 1 per prestige) |
-| `STARTER_COUNT` | Cards shown in Starter Draft |
-| `XP_BASE` / `PRESTIGE_GROWTH` / `LEVEL_GROWTH` | XP formula |
+  <div class="modal-overlay" id="pickModal"><div class="modal"><header id="modalTitle">Choose</header><div class="body"><div class="list" id="pickList"></div></div><footer><button id="cancelPick">Cancel</button></footer></div></div>
 
-### XP formula
+  <div class="modal-overlay" id="banModal"><div class="modal"><header>Ban Cards</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.7rem">Full = never · Starter only · Generate only. ✕ to unban.</p>
+    <div class="ban-controls">
+      <select id="banCardSelect"></select>
+      <select id="banTypeSelect"><option value="full">Full ban</option><option value="starter">Starter only</option><option value="generate">Generate only</option></select>
+      <button id="banAddBtn" style="background:#e17055;color:#fff">Ban</button>
+    </div>
+    <div class="ban-list" id="banList"><span class="no-picked">No bans</span></div>
+  </div><footer><button id="banClose">Close</button></footer></div></div>
 
-```
-XP to next level = XP_BASE × (1 + PRESTIGE_GROWTH × prestige) × (1 + LEVEL_GROWTH × (level − 1))
-```
+  <div class="modal-overlay" id="modModal"><div class="modal"><header>Modifiers</header><div class="body">
+    <div class="mod-row"><input type="checkbox" id="modIgnorePrereq"><div><strong>Ignore prerequisites</strong><div class="sub">All cards can appear regardless of prereqs</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modCustomInterval"><div><strong>Custom generate interval</strong><div class="sub">Levels between Generate charge awards</div>
+      <input type="number" id="modInterval" min="1" value="4" style="margin-top:.35rem"> levels</div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Charges per award</strong><div class="sub">How many Generate charges you gain each interval (default 1)</div>
+      <input type="number" id="modChargesPer" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Max level</strong><div class="sub">Default 100 — prestige unlocks at this level</div>
+      <input type="number" id="modMaxLevel" min="2" value="100" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited</div>
+      <input type="number" id="modStarterMax" min="1" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
+    <div class="mod-row"><input type="checkbox" id="modItemDraft"><div><strong>Enable Item Draft</strong><div class="sub">Shares Generate charges — choose skill or item roll</div></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Item pool mode</strong><div class="sub">Packed = roll whole packs. Unpacked = individual items only (pack names removed)</div>
+      <select id="modItemMode" style="margin-top:.35rem;width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px;">
+        <option value="packed">Packed</option>
+        <option value="unpacked">Unpacked</option>
+      </select></div></div>
+    <p style="font-size:.8rem;color:#888;margin:1rem 0 .5rem">Apply / Refresh saves modifiers and rebuilds the item pool from packs. Charge refresh only tops up if new rules would grant more (won’t wipe extras you set in Edit).</p>
+    <button id="modRefresh" class="primary" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-bottom:.5rem">Apply / Refresh Rules</button>
+  </div><footer><button id="modClose">Close</button></footer></div></div>
 
-### Adding a pack
+  <div class="modal-overlay" id="customModal"><div class="modal"><header>Custom Random</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.55rem">One per line. Not saved.</p>
+    <textarea id="customInput" placeholder="A&#10;B&#10;C"></textarea>
+    <button id="customPickBtn" style="background:#a29bfe;color:#1a1a2e;width:100%;justify-content:center">Random Pick</button>
+    <div id="customResult" style="margin-top:.7rem;font-size:1.05rem;color:#00cec9;font-weight:600;min-height:1.3rem"></div>
+  </div><footer><button id="customClose">Close</button></footer></div></div>
 
-```js
-const ITEM_PACKS = {
-  "All Swords": ["Katana", "Longsword", "Broadsword"],
-  // "Your Pack Name": ["Item A", "Item B"],
+  <div class="toast" id="toast"></div>
+<script>
+// ============================================================
+//  EDITABLE CONSTANTS
+// ============================================================
+const MASTER_LIST = [
+"Alchemy","Anatomy","Druidism","Mercantile","ArmsLore","Parry","Begging","Blacksmith","Bowcraft","Peacemaking",
+"Camping","Carpentry","Cartography","Cooking","Searching","Discordance","Psychology","Healing","Seafaring","Forensics",
+"Herding","Hiding","Provocation","Inscribe","Lockpicking","Magery","MagicResist","Tactics","Snooping","Musicianship",
+"Poisoning","Marksmanship","Spiritualism","Stealing","Tailoring","Taming","Tasting","Tinkering","Tracking","Veterinary",
+"Swords","Bludgeoning","Fencing","FistFighting","Lumberjacking","Mining","Meditation","Stealth","RemoveTrap","Necromancy",
+"Focus","Knightship","Bushido","Ninjitsu","Elementalism","Free Pick"
+];
+const PREREQS = {
+  "Blacksmith":["Mining"],"Tinkering":["Mining"],"Carpentry":["Lumberjacking"],"Bowcraft":["Lumberjacking"],
+  "Magery":["Psychology"],"Necromancy":["Spiritualism"]
 };
-```
+// ============================================================
+//  ITEM PACKS — easy to expand
+//  Packed mode: pool = pack names + loose items
+//  Unpacked mode: pool = every item inside packs + loose (no pack names)
+// ============================================================
+const ITEM_PACKS = {
+  "All Bone Armors": ["Bone Arms", "Bone Chest", "Bone Gloves", "Bone Helm", "Bone Legs", "Bone Skirt", "Orc Helm", "Skeletal Arms", "Skeletal Chest", "Skeletal Gloves", "Skeletal Helm", "Skeletal Legs"],
+  "All Chainmail Armors": ["Chainmail Coif", "Chainmail Tunic", "Chain Hatsuburi", "Chain Leggings", "Chain Skirt"],
+  "All Non-Set Helmets": ["Bascinet", "Close Helm", "Dread Helm", "Helmet", "Norse Helm", "Oniwaban Hood"],
+  "All Footwear": ["Hiking Boots", "Leather Boots", "Oniwaban Boots", "Royal Boots", "Scaly Boots"],
+  "All Leather Armors": ["Female Leather Chest", "Hide Tunic", "Leather Leggings", "Leather Arms", "Leather Bustier", "Leather Cap", "Leather Chest", "Leather Do", "Leather Cloak", "Leather Robe", "Leather Gloves", "Leather Gorget", "Leather Haidate", "Leather Hiro Sode", "Leather Jingasa", "Leather Legs", "Leather Mempo", "Leather Ninja Hood", "Leather Ninja Jacket", "Leather Ninja Mitts", "Leather Ninja Pants", "Leather Shorts", "Leather Skirt", "Leather Suneate", "Oniwaban Gloves", "Oniwaban Leggings", "Oniwaban Tunic", "Leather Shinobi Robe", "Leather Shinobi Hood", "Leather Shinobi Mask", "Shinobi Cowl"],
+  "All Plate Armors": ["Plate Kabuto(Yellow)", "Female Plate Chest", "Heavy Plate Jingasa", "Light Plate Jingasa", "Plate Arms", "Plate Kabuto(Red)", "Plate Chest", "Plate Do", "Plate Gloves", "Plate Gorget", "Plate Haidate", "Plate Hatsuburi", "Plate Helm", "Plate Hiro Sode", "Plate Legs", "Plate Mempo", "Plate Skirt", "Plate Suneate", "Small Plate Jingasa", "Plate Kabuto(Blue)"],
+  "All Ringmail Armors": ["Ringmail Arms", "Ringmail Chest", "Ringmail Gloves", "Ringmail Legs", "Ringmail Skirt"],
+  "All Royal Armors": ["Royal Arms", "Royal Chest", "Royal Gloves", "Royal Gorget", "Royal Helm", "Royal Legs", "Royal Shield"],
+  "All Scale Armor": ["Dragon Arms", "Dragon Chest", "Dragon Gloves", "Dragon Helm", "Dragon Legs", "Drakbone Bracers", "Drakbone Greaves", "Drakbone Gauntlets", "Drakbone Helm", "Drakbone Tunic", "Scaled Arms", "Scaled Chest", "Scaled Gloves", "Scaled Gorget", "Scaled Helm", "Scaled Legs", "Scaled Shield", "Scalemail Shield", "Scaly Arms", "Scaly Chest", "Scaly Gloves", "Scaly Helm", "Scaly Legs"],
+  "All Non-Set Shields": ["Bronze Shield", "Buckler", "Champion Shield", "Chaos Shield", "Crested Shield", "Dark Shield", "Elven Shield", "Guardsman Shield", "Heater Shield", "Jeweled Shield", "Metal Kite Shield", "Metal Shield", "Order Shield", "Sun Shield", "Virtue Shield", "Wooden Kite Shield", "Wooden Shield"],
+  "All Animal Hats": ["bearskin cap", "deerskin cap", "stagskin cap", "wolfskin cap"],
+  "All Studded Armors": ["Female Studded Chest", "Studded Arms", "Studded Bustier", "Studded Chest", "Studded Do", "Studded Gloves", "Studded Gorget", "Studded Haidate", "Studded Hide Chest", "Studded Huri Sode", "Studded Legs", "Studded Mempo", "Studded Skirt", "Studded Suneate"],
+  "All Wooden Armors": ["Wooden Legs", "wooden gauntlets", "wooden gorget", "wooden arms", "wooden tunic", "wooden helm"],
+  "All Axes": ["Axe", "Battle Axe", "Double Axe", "Executioner's Axe", "Hatchet", "Large Battle Axe", "Ornate Axe", "Two Handed Axe", "War axe"],
+  "All Bows": ["Bow", "Composite Bow", "Crossbow", "Elven Composite Longbow", "Heavy Crossbow", "Magical Shortbow", "Repeating Crossbow"],
+  "All Knives": ["Assassin Dagger", "Butcher Knife", "Cleaver", "Dagger", "Large Knife", "Leaf Blade", "Throwing Dagger", "War Cleaver"],
+  "All Maces": ["Club", "Battle Mace", "Hammerpick", "Mace", "Maul", "Scepter", "Spiked Club", "War Hammer", "War Mace", "Whips", "Wizard Wands", "Smith Hammers(as weapons)"],
+  "All Special Range Weapons": ["Harpoon", "Throwing Gloves", "Wizard Staff"],
+  "All Oriental Weapons": ["Bokuto", "Daisho", "Kama", "Lajatang", "No Dachi", "Nunchaku", "Sai", "Tekagi", "Tessen", "Tetsubo", "Wakizashi", "Yumi"],
+  "All Polearm Weapons": ["Bardiche", "Halbred", "Scythe"],
+  "All Forks and Spear Weapons": ["Bladed Staff", "Double Bladed Staff", "Pike", "Trident", "Pitchfork", "Short spear", "Spear", "War fork"],
+  "All Staves": ["Black Staff", "Quarter Staff", "Gnarled Staff", "Shepherd's Crook", "Druid Staff"],
+  "All Swords": ["Bone Harvester", "Broadsword", "Claymore", "Crescent Blade", "Cutlass", "Elven Machete", "Elven Spellblade", "Katana", "Kryss", "Lance", "Longsword", "Radiant Scimitar", "Royal Sword", "Rune blade", "Scimitar", "Short sword", "sword", "barbarian sword"]
+};
+// Standalone items (always in pool, both modes)
+const ITEM_LOOSE = [
+  "Cloth Clothing", "Jewelry and Trinkets", "Quivers", "Pugilist Gloves", "Elixirs", "Mixtures", "Buff Potions", "Damage Potions",
+];
+function allPackedNames(){ return Object.keys(ITEM_PACKS); }
+function allUnpackedItems(){
+  const out=[];
+  for(const items of Object.values(ITEM_PACKS)) out.push(...items);
+  return out;
+}
+function defaultItemPool(mode){
+  if(mode==="unpacked") return [...allUnpackedItems(), ...ITEM_LOOSE];
+  return [...allPackedNames(), ...ITEM_LOOSE];
+}
+const WEIGHTED_CHANCE = 0.15;
+const MAX_MILESTONE_SLOTS = 5;
+const STARTER_COUNT = 4;
+const XP_BASE = 500;
+const PRESTIGE_GROWTH = 0.25;
+const LEVEL_GROWTH = 0.08;
+// ============================================================
+const STORAGE_KEY = "draftPickerState_v6";
+const FREE_PICK = "Free Pick";
 
-- **Packed mode** (Modifiers): pool = pack names + `ITEM_LOOSE`. Rolling a pack unlocks that whole pack entry.
-- **Unpacked mode**: pool = every item inside every pack + `ITEM_LOOSE`. Pack names are not rollable.
+let state = {
+  remaining:[], picked:[], bans:{},
+  milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+  generateCharges:0, chargesSpent:0, levelsSinceReward:0,
+  starterUses:0,
+  mods:{
+    ignorePrereqs:false,
+    customInterval:false,
+    levelsPerCharge:4,
+    chargesPerAward:1,
+    maxLevel:100,
+    starterLimitOn:false,
+    starterMax:null,
+    itemDraft:false,
+    itemMode:"packed"
+  },
+  itemRemaining:[],
+  itemPicked:[]
+};
 
-After changing packs, use **Modifiers → Apply / Refresh Rules** (or Full Reset on a clean test).
+let currentMode=null, freePickCardEl=null, starterMode=false, starterCards=[];
+let generateCards=[], generateExclude=new Set(), generateKind="skill";
+let pendingSelect=null; // {item, cardEl, kind}
 
----
+const $=id=>document.getElementById(id);
+const cardsEl=$("cards"), toastEl=$("toast"), modal=$("pickModal");
 
-## Buttons (quick)
+function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+function showToast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.classList.remove("show"),2400);}
+function hasPrereq(i){return PREREQS[i]&&PREREQS[i].length>0;}
+function prereqsMet(i){
+  if(state.mods.ignorePrereqs) return true;
+  if(!hasPrereq(i)) return true;
+  return PREREQS[i].some(r=>state.picked.includes(r));
+}
+function isBanned(item,ctx){
+  const b=state.bans[item]; if(!b) return false;
+  if(b==="full") return true;
+  if(ctx==="starter"&&b==="starter") return true;
+  if(ctx==="generate"&&b==="generate") return true;
+  if(ctx==="any") return true;
+  return false;
+}
+function levelsPerCharge(){
+  if(state.mods.customInterval) return Math.max(1, parseInt(state.mods.levelsPerCharge,10)||4);
+  return 4;
+}
+function xpRequired(){
+  const p=1+PRESTIGE_GROWTH*state.prestige;
+  const l=1+LEVEL_GROWTH*(state.level-1);
+  return Math.ceil(XP_BASE*p*l);
+}
+function chargesPerAward(){ return Math.max(1, parseInt(state.mods.chargesPerAward,10)||1); }
+function maxLevel(){ return Math.max(2, parseInt(state.mods.maxLevel,10)||100); }
+function expectedChargesFromLevel(){
+  const awards = Math.floor(state.level / levelsPerCharge());
+  return awards * chargesPerAward();
+}
 
-| Control | Role |
-|---------|------|
-| **Starter Draft** | Lock / unlock cards, reroll unlocked, Finalize into Picked |
-| **Generate 3 Skills** | Costs 1 Generate charge; pick 1 of 3 (Confirm to lock) |
-| **Generate 3 Items** | Same charges; only if Item Draft is enabled in Modifiers |
-| **Manual Pick** | Add any available skill |
-| **Ban Cards** | Full / Starter-only / Generate-only |
-| **Modifiers** | Prereqs, interval, charges per award, max level, starter reroll cap, item mode |
-| **Edit Values** (Tools) | Manually set charges, level, XP, rerolls, etc. |
-| **Death Reset** | Return drafts to pool, restore charges & starter-reroll uses |
-| **Full Reset** | Wipe everything |
-| **Prestige** | At max level: soft-reset drafts, level 1, +5 rerolls, +1 milestone slot |
+function buildPool(ctx, applyW, exclude){
+  const pool=[];
+  for(const item of state.remaining){
+    if(ctx==="starter"&&item===FREE_PICK) continue;
+    if(isBanned(item,ctx)) continue;
+    if(item!==FREE_PICK&&!prereqsMet(item)) continue;
+    if(exclude&&exclude.has(item)) continue;
+    const w=hasPrereq(item)&&!state.mods.ignorePrereqs;
+    if(w&&applyW){ if(Math.random()<WEIGHTED_CHANCE) pool.push({name:item,weighted:true}); }
+    else pool.push({name:item,weighted:w&&item!==FREE_PICK});
+  }
+  return pool;
+}
+function buildItemPool(exclude){
+  return state.itemRemaining.filter(i=>!(exclude&&exclude.has(i))).map(n=>({name:n,weighted:false}));
+}
 
-Generate charges come from leveling (every *N* levels, grant *M* charges — both set in Modifiers).
+function updateStatus(){
+  const real=state.remaining.filter(x=>x!==FREE_PICK).length;
+  let extra="";
+  if(state.mods.starterLimitOn&&state.mods.starterMax) extra=` · Starter rerolls: <strong>${state.starterUses}/${state.mods.starterMax}</strong>`;
+  $("status").innerHTML=`Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong> · Generate: <strong>${state.generateCharges}</strong>${extra}`;
+  $("levelDisplay").textContent=state.level;
+  const maxL=maxLevel();
+  const lvlSpan=$("levelDisplay").parentElement;
+  if(lvlSpan) lvlSpan.innerHTML=`Level <strong id="levelDisplay">${state.level}</strong> / ${maxL}`;
 
----
+  const need=xpRequired();
+  $("xpText").textContent=`${state.xp} / ${need} XP`;
+  $("xpBarFill").style.width=Math.min(100,(state.xp/need)*100)+"%";
+  $("totalXpDisplay").textContent=state.totalXp.toLocaleString();
+  if(state.level>=maxLevel()) $("prestigeBtn").classList.add("show"); else $("prestigeBtn").classList.remove("show");
+  $("generate").disabled=state.generateCharges<1;
+  $("generateItem").disabled=state.generateCharges<1;
+  if(state.mods.itemDraft) $("generateItem").classList.add("show"); else $("generateItem").classList.remove("show");
+  // Starter limit applies to Reroll Unlocked only, not starting a draft
+  $("slotCountLabel").textContent=`(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+}
+function renderPicked(){
+  const el=$("pickedList");
+  const all=[...state.picked.map(i=>({n:i,t:"skill"})),...state.itemPicked.map(i=>({n:i,t:"item"}))];
+  if(!all.length){el.innerHTML=`<span class="no-picked">Nothing picked yet</span>`;return;}
+  el.innerHTML=all.map(x=>`<span class="picked-item">${x.n}${x.t==="item"?" (item)":""}</span>`).join("");
+}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return false;
+    const d=JSON.parse(raw);
+    if(!Array.isArray(d.remaining)||!Array.isArray(d.picked)) return false;
+    state=Object.assign(state,d);
+    while(state.milestones.length<MAX_MILESTONE_SLOTS) state.milestones.push(null);
+    state.milestones=state.milestones.slice(0,MAX_MILESTONE_SLOTS);
+    if(!state.mods) state.mods={ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed"};
+    if(typeof state.mods.chargesPerAward!=="number") state.mods.chargesPerAward=1;
+    if(typeof state.mods.maxLevel!=="number") state.mods.maxLevel=100;
+    if(!state.mods.itemMode) state.mods.itemMode="packed";
+    if(!Array.isArray(state.itemRemaining)) state.itemRemaining=defaultItemPool(state.mods.itemMode);
+    if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
+    if(typeof state.chargesSpent!=="number") state.chargesSpent=0;
+    if(typeof state.starterUses!=="number") state.starterUses=0;
+    return true;
+  }catch{return false;}
+}
 
-## Item packs (contents)
+function syncMilestoneSlots(){state.unlockedSlots=Math.min(state.prestige,MAX_MILESTONE_SLOTS);}
+function renderMilestones(){
+  syncMilestoneSlots();
+  const el=$("milestoneSlots"); el.innerHTML="";
+  for(let i=0;i<MAX_MILESTONE_SLOTS;i++){
+    const slot=document.createElement("div"); slot.className="slot";
+    if(i>=state.unlockedSlots){slot.innerHTML=`<span class="empty-label">Locked</span>`;slot.style.opacity=".4";slot.style.cursor="default";}
+    else if(state.milestones[i]){
+      slot.classList.add("filled");
+      slot.innerHTML=`${state.milestones[i]} <button class="slot-remove" data-idx="${i}">✓</button>`;
+      slot.querySelector("button").onclick=e=>{e.stopPropagation();claimMilestone(i);};
+    } else {
+      slot.innerHTML=`<span class="empty-label">+ Bank card</span>`;
+      slot.onclick=()=>openMilestonePicker(i);
+    }
+    el.appendChild(slot);
+  }
+  updateStatus();
+}
+function openMilestonePicker(idx){
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any"));
+  if(!choices.length) return showToast("No cards to bank");
+  $("modalTitle").textContent="Bank a card";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item;
+    b.onclick=()=>{state.milestones[idx]=item;state.remaining=state.remaining.filter(x=>x!==item);closeModal();save();renderMilestones();updateStatus();showToast("Banked: "+item);};
+    $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
+function claimMilestone(i){
+  const n=state.milestones[i]; if(!n) return;
+  if(!state.picked.includes(n)) state.picked.push(n);
+  state.milestones[i]=null; save(); renderMilestones(); renderPicked(); updateStatus(); showToast("Claimed: "+n);
+}
 
-These are defined in `ITEM_PACKS` inside the HTML.
+function addXP(){
+  const amount=Math.max(0,parseInt($("xpInput").value,10)||0);
+  if(amount<=0) return showToast("Enter XP");
+  $("xpInput").value="";
+  state.xp+=amount; state.totalXp+=amount;
+  let leveled=0;
+  const interval=levelsPerCharge();
+  const per=chargesPerAward();
+  const maxL=maxLevel();
+  while(state.level<maxL&&state.xp>=xpRequired()){
+    state.xp-=xpRequired(); state.level+=1; leveled+=1;
+    state.levelsSinceReward+=1;
+    if(state.levelsSinceReward>=interval){
+      state.levelsSinceReward=0;
+      state.generateCharges+=per;
+      showToast(`Level ${state.level}! +${per} Generate charge(s)`);
+    }
+  }
+  if(state.level>=maxL){state.xp=0;$("prestigeBtn").classList.add("show");}
+  save(); updateStatus(); renderMilestones();
+  if(leveled&&state.levelsSinceReward!==0) showToast(`+${amount} XP · +${leveled} level(s)`);
+  else if(!leveled) showToast(`+${amount} XP`);
+}
 
-### Armor & gear
+function applyModifiersRefresh(){
+  const prevMode=state.mods.itemMode||"packed";
+  state.mods.ignorePrereqs=$("modIgnorePrereq").checked;
+  state.mods.customInterval=$("modCustomInterval").checked;
+  state.mods.levelsPerCharge=Math.max(1,parseInt($("modInterval").value,10)||4);
+  state.mods.chargesPerAward=Math.max(1,parseInt($("modChargesPer").value,10)||1);
+  state.mods.maxLevel=Math.max(2,parseInt($("modMaxLevel").value,10)||100);
+  state.mods.starterLimitOn=$("modStarterLimit").checked;
+  const sm=$("modStarterMax").value;
+  state.mods.starterMax=sm===""||sm===null?null:Math.max(1,parseInt(sm,10)||1);
+  state.mods.itemDraft=$("modItemDraft").checked;
+  state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
 
-**All Bone Armors**  
-Bone Arms, Bone Chest, Bone Gloves, Bone Helm, Bone Legs, Bone Skirt, Orc Helm, Skeletal Arms, Skeletal Chest, Skeletal Gloves, Skeletal Helm, Skeletal Legs
+  // Rebuild item pool when mode changes (preserve already-picked)
+  if(state.mods.itemMode!==prevMode || true){
+    rebuildItemPoolFromMode();
+  }
 
-**All Chainmail Armors**  
-Chainmail Coif, Chainmail Tunic, Chain Hatsuburi, Chain Leggings, Chain Skirt
+  if(state.level>state.mods.maxLevel) state.level=state.mods.maxLevel;
 
-**All Non-Set Helmets**  
-Bascinet, Close Helm, Dread Helm, Helmet, Norse Helm, Oniwaban Hood
+  const expected=expectedChargesFromLevel();
+  const newCharges=Math.max(0, expected - state.chargesSpent);
+  const old=state.generateCharges;
+  if(newCharges>old){
+    state.generateCharges=newCharges;
+    showToast(`Rules applied · Generate ${old} → ${newCharges}`);
+  } else {
+    showToast("Rules applied · item pool refreshed");
+  }
+  state.levelsSinceReward=state.level % levelsPerCharge();
+  save(); updateStatus();
+}
+function rebuildItemPoolFromMode(){
+  const mode=state.mods.itemMode||"packed";
+  const full=defaultItemPool(mode);
+  // Keep items not yet picked that still belong in this mode
+  const pickedSet=new Set(state.itemPicked);
+  // If switching packed→unpacked, expand any picked packs into their items as picked
+  if(mode==="unpacked"){
+    const expanded=[];
+    state.itemPicked.forEach(name=>{
+      if(ITEM_PACKS[name]) expanded.push(...ITEM_PACKS[name]);
+      else expanded.push(name);
+    });
+    state.itemPicked=[...new Set(expanded)];
+  }
+  // Remaining = full pool minus picked
+  const picked=new Set(state.itemPicked);
+  state.itemRemaining=full.filter(x=>!picked.has(x));
+}
 
-**All Footwear**  
-Hiking Boots, Leather Boots, Oniwaban Boots, Royal Boots, Scaly Boots
+function doPrestige(){
+  if(state.level<maxLevel()) return;
+  if(!confirm("Prestige?\nLevel → 1 · +5 rerolls · soft-reset drafts · keeps milestones/bans")) return;
+  state.picked.forEach(c=>{if(!state.remaining.includes(c)&&c!==FREE_PICK) state.remaining.push(c);});
+  if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked=[]; state.level=1; state.xp=0; state.prestige+=1; state.rerolls+=5;
+  state.levelsSinceReward=0; state.generateCharges=0; state.chargesSpent=0; state.starterUses=0;
+  syncMilestoneSlots(); exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked(); renderMilestones();
+  cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls</p>`;
+  showToast("Prestige #"+state.prestige);
+}
+function deathReset(){
+  if(!confirm("Death Reset?\nReturn skill & item drafts to pool · restore Generate charges · reset starter reroll uses")) return;
+  state.picked.forEach(c=>{if(!state.remaining.includes(c)) state.remaining.push(c);});
+  if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked=[];
+  // Return items
+  state.itemPicked.forEach(c=>{if(!state.itemRemaining.includes(c)) state.itemRemaining.push(c);});
+  state.itemPicked=[];
+  state.generateCharges=expectedChargesFromLevel();
+  state.chargesSpent=0;
+  state.levelsSinceReward=state.level%levelsPerCharge();
+  state.starterUses=0;
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked();
+  cardsEl.innerHTML=`<p class="empty">Death reset · charges & starter rerolls restored</p>`;
+  showToast("Death reset");
+}
+function fullReset(){
+  if(!confirm("FULL RESET?")) return;
+  state={
+    remaining:[...MASTER_LIST],picked:[],bans:{},
+    milestones:Array(MAX_MILESTONE_SLOTS).fill(null),unlockedSlots:0,
+    level:1,xp:0,totalXp:0,prestige:0,rerolls:0,generateCharges:0,chargesSpent:0,
+    levelsSinceReward:0,starterUses:0,
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed"},
+    itemRemaining:defaultItemPool("packed"),itemPicked:[]
+  };
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  localStorage.removeItem(STORAGE_KEY); save();
+  syncModUI(); updateStatus(); renderPicked(); renderBans(); renderBanSelect(); renderMilestones();
+  cardsEl.innerHTML=`<p class="empty">Full reset</p>`;
+  showToast("Full reset");
+}
 
-**All Leather Armors**  
-Female Leather Chest, Hide Tunic, Leather Leggings, Leather Arms, Leather Bustier, Leather Cap, Leather Chest, Leather Do, Leather Cloak, Leather Robe, Leather Gloves, Leather Gorget, Leather Haidate, Leather Hiro Sode, Leather Jingasa, Leather Legs, Leather Mempo, Leather Ninja Hood, Leather Ninja Jacket, Leather Ninja Mitts, Leather Ninja Pants, Leather Shorts, Leather Skirt, Leather Suneate, Oniwaban Gloves, Oniwaban Leggings, Oniwaban Tunic, Leather Shinobi Robe, Leather Shinobi Hood, Leather Shinobi Mask, Shinobi Cowl
+function hideConfirm(){const b=$("confirmBar"); if(b) b.style.display="none";}
+function showConfirm(){const b=$("confirmBar"); if(b){ b.style.display="block"; b.style.visibility="visible"; }}
 
-**All Plate Armors**  
-Plate Kabuto(Yellow), Female Plate Chest, Heavy Plate Jingasa, Light Plate Jingasa, Plate Arms, Plate Kabuto(Red), Plate Chest, Plate Do, Plate Gloves, Plate Gorget, Plate Haidate, Plate Hatsuburi, Plate Helm, Plate Hiro Sode, Plate Legs, Plate Mempo, Plate Skirt, Plate Suneate, Small Plate Jingasa, Plate Kabuto(Blue)
+function openPickModal(mode){
+  currentMode=mode;
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&prereqsMet(x));
+  if(!choices.length) return showToast("None available");
+  $("modalTitle").textContent=mode==="free"?"Free Pick":"Manual Pick";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item+(hasPrereq(item)?" ★":"");
+    b.onclick=()=>finalizePick(item); $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
+function finalizePick(item){
+  state.remaining=state.remaining.filter(x=>x!==item);
+  if(!state.picked.includes(item)) state.picked.push(item);
+  if(currentMode==="free"&&freePickCardEl){
+    document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+    freePickCardEl.classList.add("selected");
+    freePickCardEl.querySelector(".hint").textContent="Locked in";
+    freePickCardEl.querySelector(".name").textContent=item;
+  }
+  closeModal(); save(); updateStatus(); renderPicked();
+  showToast(currentMode==="free"?"Free Pick → "+item:"Added: "+item);
+}
+function closeModal(){modal.classList.remove("open");currentMode=null;freePickCardEl=null;}
 
-**All Ringmail Armors**  
-Ringmail Arms, Ringmail Chest, Ringmail Gloves, Ringmail Legs, Ringmail Skirt
+function spendCharge(){ state.generateCharges-=1; state.chargesSpent+=1; }
 
-**All Royal Armors**  
-Royal Arms, Royal Chest, Royal Gloves, Royal Gorget, Royal Helm, Royal Legs, Royal Shield
+function generate(kind){
+  if(state.generateCharges<1) return showToast("Need a Generate charge");
+  exitStarterMode(); pendingSelect=null; hideConfirm();
+  generateKind=kind||"skill";
+  spendCharge();
+  generateExclude=new Set();
+  let pool;
+  if(generateKind==="item"){
+    pool=buildItemPool(generateExclude);
+  } else {
+    pool=buildPool("generate",true,generateExclude);
+  }
+  if(!pool.length){
+    state.generateCharges+=1; state.chargesSpent=Math.max(0,state.chargesSpent-1);
+    cardsEl.innerHTML=`<p class="empty">No available ${generateKind}s.</p>`;
+    save(); updateStatus(); return;
+  }
+  generateCards=shuffle(pool).slice(0,Math.min(3,pool.length));
+  generateCards.forEach(c=>generateExclude.add(c.name));
+  save(); updateStatus();
+  renderGenerateCards();
+}
+function renderGenerateCards(){
+  cardsEl.innerHTML="";
+  generateCards.forEach((entry,index)=>{
+    const item=entry.name;
+    let cls="card"+(item===FREE_PICK?" freepick":"")+(entry.weighted?" weighted":"");
+    if(pendingSelect&&pendingSelect.item===item) cls+=" pending";
+    const card=document.createElement("div"); card.className=cls;
+    card.innerHTML=`${entry.weighted?'<div class="badge">Weighted</div>':''}<div class="number">#${index+1}</div><div class="name">${item}</div><div class="hint">${item===FREE_PICK?"Click to choose freely":"Click to select · Confirm to lock"}</div><button class="reroll-one" data-idx="${index}" ${state.rerolls<1?"disabled":""}>Reroll (1 token)</button>`;
+    card.addEventListener("click",e=>{
+      if(e.target.classList.contains("reroll-one")) return;
+      if(item===FREE_PICK){ freePickCardEl=card; openPickModal("free"); return; }
+      // pending select
+      document.querySelectorAll(".card").forEach(c=>c.classList.remove("pending"));
+      card.classList.add("pending");
+      pendingSelect={item, cardEl:card, kind:generateKind, index};
+      showConfirm();
+    });
+    card.querySelector(".reroll-one").onclick=e=>{e.stopPropagation();rerollOneGenerate(index);};
+    cardsEl.appendChild(card);
+  });
+}
+function rerollOneGenerate(idx){
+  if(state.rerolls<1) return showToast("No reroll tokens");
+  const old=generateCards[idx].name;
+  const exclude=new Set(generateExclude);
+  generateCards.forEach(c=>exclude.add(c.name));
+  const pool=generateKind==="item"?buildItemPool(exclude):buildPool("generate",true,exclude);
+  if(!pool.length) return showToast("Nothing else to reroll into");
+  const next=shuffle(pool)[0];
+  generateCards[idx]=next; generateExclude.add(next.name);
+  state.rerolls-=1;
+  if(pendingSelect&&pendingSelect.index===idx){pendingSelect=null;hideConfirm();}
+  save(); updateStatus(); renderGenerateCards();
+  showToast(`Rerolled ${old} → ${next.name}`);
+}
+function confirmSelection(){
+  if(!pendingSelect) return showToast("Select a card first");
+  const {item, cardEl, kind}=pendingSelect;
+  document.querySelectorAll(".card").forEach(c=>{c.classList.remove("pending","selected");c.style.pointerEvents="none";});
+  cardEl.classList.add("selected");
+  const h=cardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+  const rb=cardEl.querySelector(".reroll-one"); if(rb) rb.remove();
+  if(kind==="item"){
+    state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+    if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
+  } else {
+    state.remaining=state.remaining.filter(x=>x!==item);
+    if(!state.picked.includes(item)) state.picked.push(item);
+  }
+  generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked();
+  showToast("Locked: "+item);
+}
 
-**All Scale Armor**  
-Dragon Arms, Dragon Chest, Dragon Gloves, Dragon Helm, Dragon Legs, Drakbone Bracers, Drakbone Greaves, Drakbone Gauntlets, Drakbone Helm, Drakbone Tunic, Scaled Arms, Scaled Chest, Scaled Gloves, Scaled Gorget, Scaled Helm, Scaled Legs, Scaled Shield, Scalemail Shield, Scaly Arms, Scaly Chest, Scaly Gloves, Scaly Helm, Scaly Legs
+function exitStarterMode(){starterMode=false;starterCards=[];$("starterBar").classList.remove("active");}
+function startStarter(){
+  starterMode=true; generateCards=[]; pendingSelect=null; hideConfirm();
+  $("starterBar").classList.add("active"); starterCards=[];
+  save(); updateStatus();
+  drawStarter(true);
+}
+function drawStarter(full){
+  const pool=buildPool("starter",true,null);
+  const locked=starterCards.filter(c=>c.locked).map(c=>c.name);
+  const avail=pool.filter(p=>!locked.includes(p.name));
+  if(full){
+    starterCards=shuffle(avail).slice(0,Math.min(STARTER_COUNT,avail.length)).map(p=>({name:p.name,locked:false,weighted:p.weighted}));
+  } else {
+    const n=starterCards.filter(c=>!c.locked).length;
+    const draws=shuffle(avail).slice(0,n); let i=0;
+    starterCards=starterCards.map(c=>{
+      if(c.locked) return c;
+      if(i<draws.length){const d=draws[i++];return {name:d.name,locked:false,weighted:d.weighted};}
+      return c;
+    });
+  }
+  renderStarter();
+}
+function renderStarter(){
+  cardsEl.innerHTML="";
+  if(!starterCards.length){cardsEl.innerHTML=`<p class="empty">No cards for starter</p>`;return;}
+  starterCards.forEach((entry,index)=>{
+    const card=document.createElement("div");
+    card.className="card"+(entry.locked?" locked":"")+(entry.weighted?" weighted":"");
+    card.innerHTML=`${entry.weighted?'<div class="badge">Weighted</div>':''}<div class="number">#${index+1}</div><div class="name">${entry.name}</div><div class="hint">${entry.locked?"Locked — click unlock":"Click to lock"}</div>`;
+    card.onclick=()=>{entry.locked=!entry.locked;renderStarter();};
+    cardsEl.appendChild(card);
+  });
+}
+function rerollUnlocked(){
+  if(!starterMode) return;
+  if(!starterCards.some(c=>!c.locked)) return showToast("Unlock at least one to reroll");
+  if(state.mods.starterLimitOn&&state.mods.starterMax!=null){
+    if(state.starterUses>=state.mods.starterMax) return showToast("Starter reroll limit reached");
+    state.starterUses+=1;
+  }
+  if(state.rerolls>0){state.rerolls-=1;showToast("Rerolled (−1 token)");}
+  else showToast("Rerolled");
+  save(); updateStatus();
+  drawStarter(false);
+}
+function finalizeStarter(){
+  if(!starterMode||!starterCards.length) return;
+  const names=starterCards.map(c=>c.name);
+  names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
+  exitStarterMode();
+  cardsEl.innerHTML=`<p class="empty">Finalized! ${names.length} card(s)</p>`;
+  save(); updateStatus(); renderPicked(); showToast("Finalized: "+names.join(", "));
+}
 
-**All Non-Set Shields**  
-Bronze Shield, Buckler, Champion Shield, Chaos Shield, Crested Shield, Dark Shield, Elven Shield, Guardsman Shield, Heater Shield, Jeweled Shield, Metal Kite Shield, Metal Shield, Order Shield, Sun Shield, Virtue Shield, Wooden Kite Shield, Wooden Shield
+function renderBanSelect(){
+  const opts=MASTER_LIST.filter(c=>c!==FREE_PICK&&!state.bans[c]);
+  $("banCardSelect").innerHTML=opts.length?opts.map(c=>`<option value="${c}">${c}</option>`).join(""):`<option value="">(none)</option>`;
+}
+function renderBans(){
+  const e=Object.entries(state.bans);
+  if(!e.length){$("banList").innerHTML=`<span class="no-picked">No bans</span>`;return;}
+  $("banList").innerHTML=e.map(([n,t])=>`<span class="ban-item">${n} <small style="opacity:.7">(${t})</small><button data-unban="${n}">✕</button></span>`).join("");
+  $("banList").querySelectorAll("[data-unban]").forEach(b=>{
+    b.onclick=()=>{delete state.bans[b.dataset.unban];save();renderBans();renderBanSelect();showToast("Unbanned");};
+  });
+}
+function syncModUI(){
+  $("modIgnorePrereq").checked=!!state.mods.ignorePrereqs;
+  $("modCustomInterval").checked=!!state.mods.customInterval;
+  $("modInterval").value=state.mods.levelsPerCharge||4;
+  if($("modChargesPer")) $("modChargesPer").value=state.mods.chargesPerAward||1;
+  if($("modMaxLevel")) $("modMaxLevel").value=state.mods.maxLevel||100;
+  $("modStarterLimit").checked=!!state.mods.starterLimitOn;
+  $("modStarterMax").value=state.mods.starterMax==null?"":state.mods.starterMax;
+  $("modItemDraft").checked=!!state.mods.itemDraft;
+  if($("modItemMode")) $("modItemMode").value=state.mods.itemMode||"packed";
+}
+function syncEditUI(){
+  $("editCharges").value=state.generateCharges;
+  $("editChargesSpent").value=state.chargesSpent;
+  $("editLevel").value=state.level;
+  $("editXp").value=state.xp;
+  $("editTotalXp").value=state.totalXp;
+  $("editRerolls").value=state.rerolls;
+  $("editPrestige").value=state.prestige;
+  $("editStarterUses").value=state.starterUses;
+}
+function applyEditValues(){
+  state.generateCharges=Math.max(0,parseInt($("editCharges").value,10)||0);
+  state.chargesSpent=Math.max(0,parseInt($("editChargesSpent").value,10)||0);
+  state.level=Math.max(1,Math.min(maxLevel(), parseInt($("editLevel").value,10)||1));
+  state.xp=Math.max(0,parseInt($("editXp").value,10)||0);
+  state.totalXp=Math.max(0,parseInt($("editTotalXp").value,10)||0);
+  state.rerolls=Math.max(0,parseInt($("editRerolls").value,10)||0);
+  state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
+  state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
+  save(); updateStatus(); renderMilestones();
+  showToast("Values updated");
+}
+function doCustomPick(){
+  const lines=$("customInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return showToast("Type options");
+  const c=lines[Math.floor(Math.random()*lines.length)];
+  $("customResult").textContent="→ "+c; $("customInput").value=""; showToast("Custom: "+c);
+}
+function exportSave(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="draft-save.json"; a.click(); showToast("Exported");
+}
+function importSave(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!Array.isArray(d.remaining)||!Array.isArray(d.picked)) throw 0;
+      state=Object.assign(state,d);
+      while(state.milestones.length<MAX_MILESTONE_SLOTS) state.milestones.push(null);
+      state.milestones=state.milestones.slice(0,MAX_MILESTONE_SLOTS);
+      if(!state.mods) state.mods={ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed"};
+      if(typeof state.mods.chargesPerAward!=="number") state.mods.chargesPerAward=1;
+      if(typeof state.mods.maxLevel!=="number") state.mods.maxLevel=100;
+      if(!state.mods.itemMode) state.mods.itemMode="packed";
+      if(!Array.isArray(state.itemRemaining)) state.itemRemaining=defaultItemPool(state.mods.itemMode);
+      if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
+      exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+      save(); syncModUI(); renderAll(); showToast("Imported");
+    }catch{showToast("Invalid save");}
+  };
+  r.readAsText(file);
+}
+function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();syncModUI();}
 
-**All Animal Hats**  
-bearskin cap, deerskin cap, stagskin cap, wolfskin cap
+$("starterBtn").onclick=startStarter;
+$("generate").onclick=()=>generate("skill");
+$("generateItem").onclick=()=>generate("item");
+$("confirmLockBtn").onclick=confirmSelection;
+$("manualPick").onclick=()=>openPickModal("manual");
+$("banBtn").onclick=()=>{renderBanSelect();renderBans();$("banModal").classList.add("open");};
+$("banClose").onclick=()=>$("banModal").classList.remove("open");
+$("banModal").onclick=e=>{if(e.target===$("banModal"))$("banModal").classList.remove("open");};
+$("modBtn").onclick=()=>{syncModUI();$("modModal").classList.add("open");};
+$("modClose").onclick=()=>$("modModal").classList.remove("open");
+$("modModal").onclick=e=>{if(e.target===$("modModal"))$("modModal").classList.remove("open");};
+$("modRefresh").onclick=applyModifiersRefresh;
+$("editBtn").onclick=()=>{syncEditUI();$("editModal").classList.add("open");};
+$("editClose").onclick=()=>$("editModal").classList.remove("open");
+$("editModal").onclick=e=>{if(e.target===$("editModal"))$("editModal").classList.remove("open");};
+$("editApply").onclick=()=>{applyEditValues();$("editModal").classList.remove("open");};
+$("customBtn").onclick=()=>{$("customResult").textContent="";$("customModal").classList.add("open");};
+$("customClose").onclick=()=>$("customModal").classList.remove("open");
+$("customModal").onclick=e=>{if(e.target===$("customModal"))$("customModal").classList.remove("open");};
+$("export").onclick=exportSave;
+$("import").onchange=e=>{if(e.target.files[0]){importSave(e.target.files[0]);e.target.value="";}};
+$("deathReset").onclick=deathReset;
+$("reset").onclick=fullReset;
+$("prestigeBtn").onclick=doPrestige;
+$("addXpBtn").onclick=addXP;
+$("rerollBtn").onclick=rerollUnlocked;
+$("finalizeBtn").onclick=finalizeStarter;
+$("cancelPick").onclick=closeModal;
+modal.onclick=e=>{if(e.target===modal)closeModal();};
+$("customPickBtn").onclick=doCustomPick;
+$("banAddBtn").onclick=()=>{
+  const n=$("banCardSelect").value,t=$("banTypeSelect").value; if(!n) return;
+  state.bans[n]=t; save(); renderBans(); renderBanSelect(); showToast("Banned "+n);
+};
 
-**All Studded Armors**  
-Female Studded Chest, Studded Arms, Studded Bustier, Studded Chest, Studded Do, Studded Gloves, Studded Gorget, Studded Haidate, Studded Hide Chest, Studded Huri Sode, Studded Legs, Studded Mempo, Studded Skirt, Studded Suneate
-
-**All Wooden Armors**  
-Wooden Legs, wooden gauntlets, wooden gorget, wooden arms, wooden tunic, wooden helm
-
-### Weapons
-
-**All Axes**  
-Axe, Battle Axe, Double Axe, Executioner's Axe, Hatchet, Large Battle Axe, Ornate Axe, Two Handed Axe, War axe
-
-**All Bows**  
-Bow, Composite Bow, Crossbow, Elven Composite Longbow, Heavy Crossbow, Magical Shortbow, Repeating Crossbow
-
-**All Knives**  
-Assassin Dagger, Butcher Knife, Cleaver, Dagger, Large Knife, Leaf Blade, Throwing Dagger, War Cleaver
-
-**All Maces**  
-Club, Battle Mace, Hammerpick, Mace, Maul, Scepter, Spiked Club, War Hammer, War Mace, Whips, Wizard Wands, Smith Hammers(as weapons)
-
-**All Special Range Weapons**  
-Harpoon, Throwing Gloves, Wizard Staff
-
-**All Oriental Weapons**  
-Bokuto, Daisho, Kama, Lajatang, No Dachi, Nunchaku, Sai, Tekagi, Tessen, Tetsubo, Wakizashi, Yumi
-
-**All Polearm Weapons**  
-Bardiche, Halbred, Scythe
-
-**All Forks and Spear Weapons**  
-Bladed Staff, Double Bladed Staff, Pike, Trident, Pitchfork, Short spear, Spear, War fork
-
-**All Staves**  
-Black Staff, Quarter Staff, Gnarled Staff, Shepherd's Crook, Druid Staff
-
-**All Swords**  
-Bone Harvester, Broadsword, Claymore, Crescent Blade, Cutlass, Elven Machete, Elven Spellblade, Katana, Kryss, Lance, Longsword, Radiant Scimitar, Royal Sword, Rune blade, Scimitar, Short sword, sword, barbarian sword
-
-### Loose items (`ITEM_LOOSE`)
-
-Always in the item pool (packed and unpacked):  
-Cloth Clothing, Jewelry and Trinkets, Quivers, Pugilist Gloves, Elixirs, Mixtures, Buff Potions, Damage Potions
-
----
-
-## Saves
-
-- Auto-save key: `draftPickerState_v6` (browser localStorage)
-- **Export Save** → `draft-save.json`
-- **Import Save** loads that file back
+if(!load()){
+  state.remaining=[...MASTER_LIST];
+  state.milestones=Array(MAX_MILESTONE_SLOTS).fill(null);
+  state.itemRemaining=defaultItemPool(state.mods.itemMode||"packed");
+}
+if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)&&!state.picked.includes(FREE_PICK))
+  state.remaining.push(FREE_PICK);
+renderAll();
+</script>
+</body>
+</html>
