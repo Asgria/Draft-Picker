@@ -11,20 +11,17 @@
     .app-shell{display:contents}
     .main-col{display:contents}
     .quest-rail{
-      position:fixed; right:16px; top:120px;
+      position:fixed; left:16px; bottom:16px;
       width:300px; z-index:40;
       pointer-events:none;
+      max-height:calc(100vh - 32px); overflow-y:auto;
     }
     .quest-rail .quest-log{pointer-events:auto}
-    @media (max-width: 1100px){
-      .quest-rail{right:8px; width:260px; top:110px}
-    }
-    /* Below this, dock quest log under content so it never shoves the center column */
     @media (max-width: 960px){
       .quest-rail{
         position:static; width:100%; max-width:700px;
-        margin:1.25rem auto 0; right:auto; top:auto;
-        pointer-events:auto;
+        margin:1.25rem auto 0; left:auto; bottom:auto;
+        pointer-events:auto; max-height:none;
       }
     }
     .quest-log{
@@ -88,7 +85,8 @@
     button,label.file-btn{border:none;padding:.6rem 1rem;font-size:.85rem;font-weight:600;border-radius:10px;cursor:pointer;transition:background .2s,transform .15s,opacity .2s;display:inline-flex;align-items:center}
     button:active,label.file-btn:active{transform:translateY(1px)}
     button:disabled{opacity:.4;cursor:not-allowed;transform:none}
-    #generate{background:#6c5ce7;color:#fff}
+    #generate{background:#6c5ce7;color:#fff;display:none}
+    #generate.show{display:inline-flex}
     #generate:hover:not(:disabled){background:#5a4bd1}
     #generateItem{background:#9b59b6;color:#fff;display:none}
     #generateItem.show{display:inline-flex}
@@ -205,10 +203,10 @@
   <div class="controls">
     <button id="starterBtn" title="Open a starter hand: lock cards, reroll unlocked, then finalize into your draft">Starter Draft</button>
     <button id="generate" title="Spend 1 Generate charge to roll 3 skills — select one and Confirm">Generate 3 Skills</button>
-    <button id="generateItem" title="Spend 1 Generate charge to roll 3 items (enable in Modifiers)">Generate 3 Items</button>
+    <button id="generateItem" title="Spend 1 Item charge (or buy one with 500 coins)" style="display:none">Generate 3 Items</button>
+    <button id="startItemsBtn" title="One-time starter item roll (prefers weapons for your combat skills)" style="display:none;background:#6c3483;color:#fff">Starter Items</button>
+    <button id="buyItemChargeBtn" title="Spend 500 coins for +1 Item Generate charge (not skill charges)" style="display:none;background:#b7950b;color:#1a1a2e">Buy Item Charge (500)</button>
     <button id="questBtn" title="Roll a quest for extra XP/rewards (no Generate charge). Cooldown applies after claim/skip.">Generate Quest</button>
-    <button id="manualPick" title="Manually add any available skill to your draft">Manual Pick</button>
-    <button id="banBtn" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
     <button id="modBtn" title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
     <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
     <button id="customBtn" title="One-off random pick from a temporary list (not saved to draft)">Custom Random</button>
@@ -219,11 +217,14 @@
     <button id="prestigeBtn" title="Available at max level: soft-reset draft, level 1, +5 rerolls">Prestige</button>
   </div>
   <div class="status" id="status"></div>
+  <div class="status" id="chargeInfo" style="margin-bottom:.55rem;color:#aaa"></div>
   <div class="xp-panel">
     <h2>Level &amp; Experience</h2>
     <div class="xp-row"><span>Level <strong id="levelDisplay">1</strong> / 100</span><span id="xpText">0 / 500 XP</span></div>
     <div class="xp-bar"><div id="xpBarFill" style="width:0%"></div></div>
     <div class="total-xp">Total XP earned: <strong id="totalXpDisplay">0</strong></div>
+    <div class="total-xp" id="coinsDisplayRow" style="display:none">Total Coins earned: <strong id="totalCoinsDisplay">0</strong></div>
+    <div class="total-xp" id="spendableCoinsRow" style="display:none">Spendable Coins: <strong id="spendableCoinsDisplay">0</strong></div>
     <div class="xp-add">
       <input type="number" id="xpInput" min="1" placeholder="XP gained this session">
       <button id="addXpBtn" title="Add session XP toward leveling and Generate charges">Add XP</button>
@@ -237,14 +238,22 @@
   </div>
   <div class="cards" id="cards"><p class="empty">Use Starter Draft, or earn Generate charges by leveling</p></div>
   <div id="confirmBar" style="display:none;width:100%;max-width:700px;margin:1.1rem auto 0;text-align:center;position:relative;z-index:5;">
-    <button id="confirmLockBtn" type="button" style="background:#00cec9;color:#0a1a1a;padding:.7rem 1.6rem;font-size:1rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,206,201,.35);">Confirm Selection</button>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center">
+      <button id="confirmLockBtn" type="button" style="background:#00cec9;color:#0a1a1a;padding:.7rem 1.6rem;font-size:1rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,206,201,.35);">Confirm Selection</button>
+      <button id="confirmBuyBtn" type="button" style="display:none;background:#b7950b;color:#1a1a2e;padding:.7rem 1.2rem;font-size:.95rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;">Confirm &amp; Buy Another Roll</button>
+    </div>
   </div>
 
   </div>
   <div class="panel">
-    <h2>Milestone RewardSlots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
+    <h2>Milestone Reward Slots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
     <p class="hint">Slots unlock with prestige (P1=1, P2=2…). Empty = bank · Filled ✓ = claim.</p>
     <div class="slots" id="milestoneSlots"></div>
+  </div>
+  <div class="panel" id="itemMilestonePanel" style="display:none">
+    <h2>Item Milestone Slots <span style="color:#666;font-weight:400;font-size:.85rem" id="itemSlotCountLabel"></span></h2>
+    <p class="hint">Item bank slots (same prestige unlock count). Empty = bank · Filled ✓ = claim into item draft.</p>
+    <div class="slots" id="itemMilestoneSlots"></div>
   </div>
   <div class="panel">
     <h2>Picked so far</h2>
@@ -255,6 +264,9 @@
     <h2>Tools</h2>
     <p class="hint">Named saves are stored in this browser (localStorage). Export writes a JSON file you choose (Chrome/Edge can overwrite). Import only updates the active save.</p>
     <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+      <button id="manualPick" style="background:#e17055;color:#fff;" title="Manually add any available skill to your draft">Manual Skill</button>
+      <button id="manualItemBtn" style="background:#8e44ad;color:#fff;display:none" title="Manually add an item from the current item pool">Manual Item</button>
+      <button id="banBtn" style="background:#636e72;color:#fff;" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
       <button id="editBtn" style="background:#636e72;color:#fff;" title="Manually set charges, level, XP, rerolls, prestige">Edit Values</button>
       <button id="resetQuestCd" style="background:#8e6b2a;color:#f5e6c8;" title="Clear the quest generate cooldown timer">Reset Quest Cooldown</button>
       <button id="reset" style="background:#5c2a2a;color:#f88;border:1px solid #833;" title="Wipe the CURRENT save slot only back to defaults">Full Reset (this save)</button>
@@ -324,6 +336,24 @@
     <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited</div>
       <input type="number" id="modStarterMax" min="1" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
     <div class="mod-row"><input type="checkbox" id="modItemDraft"><div><strong>Enable Item Draft</strong><div class="sub">Shares Generate charges — choose skill or item roll</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modGoldItems"><div><strong>Spend gold for item rolls</strong><div class="sub">XP deposits coins 1:1. Buy Generate charges for items at 500 coins. Quests deposit 25% of entered XP as coins.</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modProfessions"><div><strong>Profession limit</strong><div class="sub">Pick 1 gathering + 1 crafting. Other craft skills leave the pool (Cooking &amp; Forensics always stay).</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem">
+        <select id="modGatherSkill" style="background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.35rem;border-radius:8px">
+          <option value="Mining">Mining</option>
+          <option value="Lumberjacking">Lumberjacking</option>
+        </select>
+        <select id="modCraftSkill" style="background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.35rem;border-radius:8px">
+          <option value="Alchemy">Alchemy</option>
+          <option value="Blacksmith">Blacksmith</option>
+          <option value="Bowcraft">Bowcraft</option>
+          <option value="Carpentry">Carpentry</option>
+          <option value="Inscribe">Inscribe</option>
+          <option value="Tailoring">Tailoring</option>
+          <option value="Tinkering">Tinkering</option>
+        </select>
+      </div>
+    </div></div>
     <div class="mod-row"><div style="flex:1"><strong>Item pool mode</strong><div class="sub">Packed = roll whole packs. Unpacked = individual items only (pack names removed)</div>
       <select id="modItemMode" style="margin-top:.35rem;width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px;">
         <option value="packed">Packed</option>
@@ -412,6 +442,19 @@ function defaultItemPool(mode){
   if(mode==="unpacked") return [...allUnpackedItems(), ...ITEM_LOOSE];
   return [...allPackedNames(), ...ITEM_LOOSE];
 }
+const CRAFT_SKILLS = ["Alchemy","Blacksmith","Bowcraft","Carpentry","Inscribe","Tailoring","Tinkering"];
+const GATHER_SKILLS = ["Mining","Lumberjacking"];
+const MISC_ALWAYS = ["Cooking","Forensics"]; // always allowed under profession mode
+const ITEM_CHARGE_COST = 500;
+const QUEST_COIN_PCT = 0.25; // quests deposit this fraction of entered kill XP as coins
+const COMBAT_STARTER_ITEMS = {
+  "Swords": ["Longsword","Broadsword","Axe"],
+  "Fencing": ["Kryss","Dagger","Assassin Spike"],
+  "Marksmanship": ["Bow","Woodland Crossbow","Wizard Staff","Throwing Gloves"],
+  "Bludgeoning": ["Club","Mace","Warhammer","Spiked Club"],
+  "FistFighting": ["Pugilist Gloves"]
+};
+
 // ============================================================
 //  QUESTS — easy to expand
 //  type: "kill" | "craft"
@@ -557,8 +600,8 @@ let state = {
   remaining:[], picked:[], bans:{},
   milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
   unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
-  generateCharges:0, chargesSpent:0, levelsSinceReward:0,
-  starterUses:0,
+  generateCharges:0, itemCharges:0, chargesSpent:0, itemChargesSpent:0, levelsSinceReward:0,
+  starterUses:0, starterItemUses:0,
   mods:{
     ignorePrereqs:false,
     customInterval:false,
@@ -574,10 +617,17 @@ let state = {
   itemPicked:[],
   quest:null, // active quest instance
   questStreak:0,
-  questCooldownUntil:0
+  questCooldownUntil:0,
+  questChoices:null, // up to 3 offered quests before picking one
+  totalCoins:0,
+  spendableCoins:0,
+  coinsSpent:0,
+  starterToken:true,
+  starterItemToken:true,
+  itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null)
 };
 
-let currentMode=null, freePickCardEl=null, starterMode=false, starterCards=[];
+let currentMode=null, freePickCardEl=null, starterMode=false, starterIsItems=false, starterCards=[];
 let generateCards=[], generateExclude=new Set(), generateKind="skill";
 let pendingSelect=null; // {item, cardEl, kind}
 
@@ -617,12 +667,32 @@ function expectedChargesFromLevel(){
   return awards * chargesPerAward();
 }
 
+function isBlockedByProfession(skill){
+  if(!(state.mods&&state.mods.professions)) return false;
+  if(typeof MISC_ALWAYS!=="undefined" && MISC_ALWAYS.includes(skill)) return false;
+  if(typeof CRAFT_SKILLS!=="undefined" && CRAFT_SKILLS.includes(skill) && skill!==state.mods.craftSkill) return true;
+  if(typeof GATHER_SKILLS!=="undefined" && GATHER_SKILLS.includes(skill) && skill!==state.mods.gatherSkill) return true;
+  return false;
+}
+function applyProfessionFilter(){
+  if(!(state.mods&&state.mods.professions)) return;
+  const g=state.mods.gatherSkill, c=state.mods.craftSkill;
+  // Auto-grant selected professions every time
+  [g,c].forEach(sk=>{
+    if(!sk) return;
+    if(!state.picked.includes(sk)) state.picked.push(sk);
+    state.remaining=state.remaining.filter(x=>x!==sk);
+  });
+  // Remove other craft/gather from pool (unrollable)
+  state.remaining = state.remaining.filter(s=>s===FREE_PICK||!isBlockedByProfession(s));
+}
 function buildPool(ctx, applyW, exclude){
   const pool=[];
   for(const item of state.remaining){
     if(ctx==="starter"&&item===FREE_PICK) continue;
     if(isBanned(item,ctx)) continue;
     if(item!==FREE_PICK&&!prereqsMet(item)) continue;
+    if(item!==FREE_PICK&&isBlockedByProfession(item)) continue;
     if(exclude&&exclude.has(item)) continue;
     const w=hasPrereq(item)&&!state.mods.ignorePrereqs;
     if(w&&applyW){ if(Math.random()<WEIGHTED_CHANCE) pool.push({name:item,weighted:true}); }
@@ -637,8 +707,20 @@ function buildItemPool(exclude){
 function updateStatus(){
   const real=state.remaining.filter(x=>x!==FREE_PICK).length;
   let extra="";
-  if(state.mods.starterLimitOn&&state.mods.starterMax) extra=` · Starter rerolls: <strong>${state.starterUses}/${state.mods.starterMax}</strong>`;
-  $("status").innerHTML=`Save: <strong>${activeSaveName}</strong> · Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong> · Generate: <strong>${state.generateCharges}</strong>${extra}`;
+  if(state.mods.starterLimitOn&&state.mods.starterMax!=null){
+    const max=state.mods.starterMax||0;
+    const parts=[];
+    if(state.starterToken || (starterMode && !starterIsItems)){
+      const skillLeft=Math.max(0,max-(state.starterUses||0));
+      parts.push(`Skill starter rerolls: <strong>${skillLeft}/${max}</strong>`);
+    }
+    if(state.mods.itemDraft && (state.starterItemToken || (starterMode && starterIsItems))){
+      const itemLeft=Math.max(0,max-(state.starterItemUses||0));
+      parts.push(`Item starter rerolls: <strong>${itemLeft}/${max}</strong>`);
+    }
+    if(parts.length) extra=` · `+parts.join(" · ");
+  }
+  $("status").innerHTML=`Save: <strong>${activeSaveName}</strong> · Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong>${extra}`;
   const maxL=maxLevel();
   const ld=$("levelDisplay");
   if(ld){
@@ -655,12 +737,59 @@ function updateStatus(){
   $("xpText").textContent=`${state.xp} / ${need} XP`;
   $("xpBarFill").style.width=Math.min(100,(state.xp/need)*100)+"%";
   $("totalXpDisplay").textContent=state.totalXp.toLocaleString();
+  const goldOn=!!(state.mods&&state.mods.goldItems);
+  const itemOn=!!(state.mods&&state.mods.itemDraft);
+  const cdr=$("coinsDisplayRow"), scr=$("spendableCoinsRow");
+  if(cdr) cdr.style.display=goldOn?"block":"none";
+  if(scr) scr.style.display=goldOn?"block":"none";
+  if($("totalCoinsDisplay")) $("totalCoinsDisplay").textContent=(state.totalCoins||0).toLocaleString();
+  if($("spendableCoinsDisplay")) $("spendableCoinsDisplay").textContent=(state.spendableCoins||0).toLocaleString();
   if(state.level>=maxLevel()) $("prestigeBtn").classList.add("show"); else $("prestigeBtn").classList.remove("show");
-  $("generate").disabled=state.generateCharges<1;
-  $("generateItem").disabled=state.generateCharges<1;
-  if(state.mods.itemDraft) $("generateItem").classList.add("show"); else $("generateItem").classList.remove("show");
-  // Starter limit applies to Reroll Unlocked only, not starting a draft
+  const skillCh=state.generateCharges|0;
+  const itemCh=state.itemCharges|0;
+  const ci=$("chargeInfo");
+  if(ci){
+    let t=`Skill gen rolls: <strong>${skillCh}</strong>`;
+    if(itemOn) t+=` · Item gen rolls: <strong>${itemCh}</strong>`;
+    if(goldOn) t+=` · Spendable coins: <strong>${state.spendableCoins|0}</strong>`;
+    ci.innerHTML=t;
+  }
+  const gen=$("generate");
+  if(gen){ gen.disabled=skillCh<1; if(skillCh>=1) gen.classList.add("show"); else gen.classList.remove("show"); }
+  const genI=$("generateItem");
+  if(genI){
+    if(itemOn){
+      genI.style.display="inline-flex"; genI.classList.add("show");
+      genI.disabled=itemCh<1;
+    } else { genI.style.display="none"; genI.classList.remove("show"); }
+  }
+  const manI=$("manualItemBtn"); if(manI) manI.style.display=itemOn?"inline-flex":"none";
+  const buy=$("buyItemChargeBtn");
+  if(buy){
+    const cost=typeof ITEM_CHARGE_COST!=="undefined"?ITEM_CHARGE_COST:500;
+    buy.style.display=(itemOn&&goldOn)?"inline-flex":"none";
+    buy.disabled=(state.spendableCoins||0)<cost;
+  }
+  const startI=$("startItemsBtn");
+  if(startI){
+    const show=itemOn && state.starterItemToken && !starterMode;
+    startI.style.display=show?"inline-flex":"none";
+    if(!show) startI.setAttribute("hidden","hidden"); else startI.removeAttribute("hidden");
+  }
+  const sb=$("starterBtn");
+  if(sb){
+    const show=!!state.starterToken && !starterMode;
+    sb.style.display=show?"inline-flex":"none";
+    sb.disabled=false;
+    if(!show) sb.setAttribute("hidden","hidden"); else sb.removeAttribute("hidden");
+  }
+  // Hide whole starter control strip when neither skill nor item starter is available mid-session
+  // (starterBar itself only shows while active)
+
   $("slotCountLabel").textContent=`(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+  const imp=$("itemMilestonePanel"); if(imp) imp.style.display=itemOn?"":"none";
+  if(typeof updateQuestButton==="function") updateQuestButton();
+  if(typeof renderItemMilestones==="function") renderItemMilestones();
 }
 function renderPicked(){
   const el=$("pickedList");
@@ -709,22 +838,39 @@ function normalizeState(data){
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
     unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
-    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60},
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"},
     itemRemaining:[], itemPicked:[]
   }, data);
   while(s.milestones.length<MAX_MILESTONE_SLOTS) s.milestones.push(null);
   s.milestones=s.milestones.slice(0,MAX_MILESTONE_SLOTS);
   if(!s.mods) s.mods={};
-  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60}, s.mods);
+  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"}, s.mods);
   if(!Array.isArray(s.itemRemaining)) s.itemRemaining=defaultItemPool(s.mods.itemMode||"packed");
   if(!Array.isArray(s.itemPicked)) s.itemPicked=[];
   if(typeof s.chargesSpent!=="number") s.chargesSpent=0;
   if(typeof s.starterUses!=="number") s.starterUses=0;
+  if(typeof s.starterItemUses!=="number") s.starterItemUses=0;
   if(typeof s.mods.questsEnabled!=="boolean") s.mods.questsEnabled=false;
   if(typeof s.mods.questCooldownMinutes!=="number") s.mods.questCooldownMinutes=60;
   if(typeof s.questStreak!=="number") s.questStreak=0;
   if(typeof s.questCooldownUntil!=="number") s.questCooldownUntil=0;
   if(s.quest===undefined) s.quest=null;
+  if(s.questChoices===undefined) s.questChoices=null;
+  if(typeof s.totalCoins!=="number") s.totalCoins=0;
+  if(typeof s.spendableCoins!=="number") s.spendableCoins=0;
+  if(typeof s.coinsSpent!=="number") s.coinsSpent=0;
+  if(typeof s.itemCharges!=="number") s.itemCharges=0;
+  if(typeof s.itemChargesSpent!=="number") s.itemChargesSpent=0;
+  if(typeof s.starterToken!=="boolean") s.starterToken = s.starterDone===false ? true : !s.starterDone;
+  if(typeof s.starterItemToken!=="boolean") s.starterItemToken=true;
+  delete s.starterDone;
+  if(!Array.isArray(s.itemMilestones)) s.itemMilestones=Array(MAX_MILESTONE_SLOTS).fill(null);
+  while(s.itemMilestones.length<MAX_MILESTONE_SLOTS) s.itemMilestones.push(null);
+  s.itemMilestones=s.itemMilestones.slice(0,MAX_MILESTONE_SLOTS);
+  if(typeof s.mods.goldItems!=="boolean") s.mods.goldItems=false;
+  if(typeof s.mods.professions!=="boolean") s.mods.professions=false;
+  if(!s.mods.gatherSkill) s.mods.gatherSkill="Mining";
+  if(!s.mods.craftSkill) s.mods.craftSkill="Blacksmith";
   return s;
 }
 function readSavesStore(){
@@ -964,6 +1110,10 @@ function addXP(){
   if(amount<=0) return showToast("Enter XP");
   $("xpInput").value="";
   state.xp+=amount; state.totalXp+=amount;
+  if(state.mods&&state.mods.goldItems){
+    state.totalCoins=(state.totalCoins||0)+amount;
+    state.spendableCoins=(state.spendableCoins||0)+amount;
+  }
   let leveled=0;
   const interval=levelsPerCharge();
   const per=chargesPerAward();
@@ -998,6 +1148,11 @@ function applyModifiersRefresh(){
   state.mods.draftReroll=$("modDraftReroll")?$("modDraftReroll").checked:false;
   state.mods.questsEnabled=$("modQuests")?$("modQuests").checked:false;
   state.mods.questCooldownMinutes=Math.max(1,parseInt($("modQuestCd")&&$("modQuestCd").value,10)||60);
+  state.mods.goldItems=$("modGoldItems")?$("modGoldItems").checked:false;
+  state.mods.professions=$("modProfessions")?$("modProfessions").checked:false;
+  if($("modGatherSkill")) state.mods.gatherSkill=$("modGatherSkill").value||"Mining";
+  if($("modCraftSkill")) state.mods.craftSkill=$("modCraftSkill").value||"Blacksmith";
+  applyProfessionFilter();
 
   // Rebuild item pool when mode changes (preserve already-picked)
   if(state.mods.itemMode!==prevMode || true){
@@ -1044,26 +1199,36 @@ function doPrestige(){
   if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
   state.picked=[]; state.level=1; state.xp=0; state.prestige+=1; state.rerolls+=5;
   state.levelsSinceReward=0; state.generateCharges=0; state.chargesSpent=0; state.starterUses=0;
-  syncMilestoneSlots(); exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
-  save(); updateStatus(); renderPicked(); renderMilestones();
+  syncMilestoneSlots(); clearQuestState(); state.starterToken=true; state.starterItemToken=true; exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked(); renderMilestones(); renderQuestLog();
   cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls</p>`;
   showToast("Prestige #"+state.prestige);
 }
+function clearQuestState(){
+  state.quest=null;
+  state.questChoices=null;
+  state.questCooldownUntil=0;
+}
 function deathReset(){
-  if(!confirm("Death Reset?\nReturn skill & item drafts to pool · restore Generate charges · reset starter reroll uses")) return;
+  if(!confirm("Death Reset?\nReturn drafts to pool · restore Generate charges · refund spent coins · clear quest")) return;
   state.picked.forEach(c=>{if(!state.remaining.includes(c)) state.remaining.push(c);});
   if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
   state.picked=[];
-  // Return items
   state.itemPicked.forEach(c=>{if(!state.itemRemaining.includes(c)) state.itemRemaining.push(c);});
   state.itemPicked=[];
   state.generateCharges=expectedChargesFromLevel();
   state.chargesSpent=0;
   state.levelsSinceReward=state.level%levelsPerCharge();
   state.starterUses=0;
+  state.starterToken=true;
+  state.starterItemToken=true;
+  // refund coins spent on item charges
+  state.spendableCoins=(state.spendableCoins||0)+(state.coinsSpent||0);
+  state.coinsSpent=0;
+  clearQuestState();
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
-  save(); updateStatus(); renderPicked();
-  cardsEl.innerHTML=`<p class="empty">Death reset · charges & starter rerolls restored</p>`;
+  save(); updateStatus(); renderPicked(); renderQuestLog();
+  cardsEl.innerHTML=`<p class="empty">Death reset · charges, coins & quests restored</p>`;
   showToast("Death reset");
 }
 function fullReset(){
@@ -1071,11 +1236,13 @@ function fullReset(){
   state={
     remaining:[...MASTER_LIST],picked:[],bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),unlockedSlots:0,
-    level:1,xp:0,totalXp:0,prestige:0,rerolls:0,generateCharges:0,chargesSpent:0,
+    level:1,xp:0,totalXp:0,prestige:0,rerolls:0,generateCharges:0,itemCharges:0,chargesSpent:0,itemChargesSpent:0,
     levelsSinceReward:0,starterUses:0,
-    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60},
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"},
     itemRemaining:defaultItemPool("packed"),itemPicked:[],
-    quest:null, questStreak:0, questCooldownUntil:0
+    quest:null, questStreak:0, questCooldownUntil:0, questChoices:null,
+    totalCoins:0, spendableCoins:0, coinsSpent:0, starterToken:true, starterItemToken:true,
+    itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null)
   };
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   save();
@@ -1084,12 +1251,27 @@ function fullReset(){
   showToast("Reset save: "+activeSaveName);
 }
 
-function hideConfirm(){const b=$("confirmBar"); if(b) b.style.display="none";}
-function showConfirm(){const b=$("confirmBar"); if(b){ b.style.display="block"; b.style.visibility="visible"; }}
+function hideConfirm(){
+  const b=$("confirmBar"); if(b) b.style.display="none";
+  const cb=$("confirmBuyBtn"); if(cb) cb.style.display="none";
+}
+function showConfirm(){
+  const b=$("confirmBar"); if(b){ b.style.display="block"; b.style.visibility="visible"; }
+  const cb=$("confirmBuyBtn");
+  if(cb){
+    const cost=typeof ITEM_CHARGE_COST!=="undefined"?ITEM_CHARGE_COST:500;
+    const kind=(pendingSelect&&pendingSelect.kind)||generateKind;
+    const coins=Number(state.spendableCoins)||0;
+    const goldOn=!!(state.mods&&state.mods.goldItems);
+    const show = kind==="item" && goldOn && coins>=cost;
+    cb.style.display=show?"inline-flex":"none";
+    cb.disabled=!show;
+  }
+}
 
 function openPickModal(mode){
   currentMode=mode;
-  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&prereqsMet(x));
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&prereqsMet(x)&&!isBlockedByProfession(x));
   if(!choices.length) return showToast("None available");
   $("modalTitle").textContent=mode==="free"?"Free Pick":"Manual Pick";
   $("pickList").innerHTML="";
@@ -1115,11 +1297,17 @@ function closeModal(){modal.classList.remove("open");currentMode=null;freePickCa
 
 function spendCharge(){ state.generateCharges-=1; state.chargesSpent+=1; }
 
+function spendSkillCharge(){ state.generateCharges=Math.max(0,(state.generateCharges||0)-1); state.chargesSpent=(state.chargesSpent||0)+1; }
+function spendItemCharge(){ state.itemCharges=Math.max(0,(state.itemCharges||0)-1); state.itemChargesSpent=(state.itemChargesSpent||0)+1; }
 function generate(kind){
-  if(state.generateCharges<1) return showToast("Need a Generate charge");
-  exitStarterMode(); pendingSelect=null; hideConfirm();
   generateKind=kind||"skill";
-  spendCharge();
+  if(generateKind==="item"){
+    if((state.itemCharges||0)<1) return showToast("Need an Item gen roll (buy with 500 coins or earn later)");
+  } else {
+    if((state.generateCharges||0)<1) return showToast("Need a Skill gen roll");
+  }
+  exitStarterMode(); pendingSelect=null; hideConfirm();
+  if(generateKind==="item") spendItemCharge(); else spendSkillCharge();
   generateExclude=new Set();
   let pool;
   if(generateKind==="item"){
@@ -1128,7 +1316,8 @@ function generate(kind){
     pool=buildPool("generate",true,generateExclude);
   }
   if(!pool.length){
-    state.generateCharges+=1; state.chargesSpent=Math.max(0,state.chargesSpent-1);
+    if(generateKind==="item"){ state.itemCharges=(state.itemCharges||0)+1; state.itemChargesSpent=Math.max(0,(state.itemChargesSpent||0)-1); }
+    else { state.generateCharges=(state.generateCharges||0)+1; state.chargesSpent=Math.max(0,(state.chargesSpent||0)-1); }
     cardsEl.innerHTML=`<p class="empty">No available ${generateKind}s.</p>`;
     save(); updateStatus(); return;
   }
@@ -1173,15 +1362,24 @@ function rerollOneGenerate(idx){
   save(); updateStatus(); renderGenerateCards();
   showToast(`Rerolled ${old} → ${next.name}`);
 }
-function confirmSelection(){
+function lockPendingCard(buyAnother){
   if(!pendingSelect) return showToast("Select a card first");
   const {item, cardEl, kind}=pendingSelect;
   document.querySelectorAll(".card").forEach(c=>{c.classList.remove("pending","selected");c.style.pointerEvents="none";});
-  cardEl.classList.add("selected");
-  const h=cardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
-  const rb=cardEl.querySelector(".reroll-one"); if(rb) rb.remove();
+  if(cardEl){
+    cardEl.classList.add("selected");
+    const h=cardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+    const rb=cardEl.querySelector(".reroll-one"); if(rb) rb.remove();
+  }
   if(kind==="item"){
     state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+    if(state.mods&&state.mods.itemMode==="packed" && typeof ITEM_PACKS!=="undefined"){
+      Object.keys(ITEM_PACKS).forEach(pk=>{
+        if((ITEM_PACKS[pk]||[]).includes(item)){
+          state.itemRemaining=state.itemRemaining.filter(x=>x!==pk);
+        }
+      });
+    }
     if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
   } else {
     state.remaining=state.remaining.filter(x=>x!==item);
@@ -1190,12 +1388,33 @@ function confirmSelection(){
   generateCards=[]; pendingSelect=null; hideConfirm();
   save(); updateStatus(); renderPicked();
   showToast("Locked: "+item);
+  if(buyAnother){
+    if(kind!=="item") return showToast("Buy another only works for item rolls");
+    if(!(state.mods&&state.mods.goldItems)) return showToast("Enable Spend gold for item rolls in Modifiers");
+    const cost=typeof ITEM_CHARGE_COST!=="undefined"?ITEM_CHARGE_COST:500;
+    const coins=Number(state.spendableCoins)||0;
+    if(coins<cost) return showToast("Need "+cost+" spendable coins (have "+coins+")");
+    state.spendableCoins=coins-cost;
+    state.coinsSpent=(state.coinsSpent||0)+cost;
+    state.itemCharges=(state.itemCharges||0)+1;
+    save(); updateStatus();
+    showToast("−"+cost+" coins · rolling items again");
+    setTimeout(()=>generate("item"), 50);
+  }
+}
+function confirmSelection(){ lockPendingCard(false); }
+function confirmAndBuyAnother(){
+  if(!pendingSelect) return showToast("Select an item card first");
+  lockPendingCard(true);
 }
 
-function exitStarterMode(){starterMode=false;starterCards=[];$("starterBar").classList.remove("active");}
+function exitStarterMode(){starterMode=false;starterIsItems=false;starterCards=[];$("starterBar").classList.remove("active");}
 function startStarter(){
-  starterMode=true; generateCards=[]; pendingSelect=null; hideConfirm();
+  if(!state.starterToken) return showToast("Starter Draft already used — Death/Full Reset to restore");
+  starterMode=true; starterIsItems=false; generateCards=[]; pendingSelect=null; hideConfirm();
   $("starterBar").classList.add("active"); starterCards=[];
+  const ht=$("starterBar")&&$("starterBar").querySelector(".hint-text");
+  if(ht) ht.textContent="Click cards to lock/unlock · Reroll unlocked · Finalize skills";
   save(); updateStatus();
   drawStarter(true);
 }
@@ -1231,21 +1450,189 @@ function rerollUnlocked(){
   if(!starterMode) return;
   if(!starterCards.some(c=>!c.locked)) return showToast("Unlock at least one to reroll");
   if(state.mods.starterLimitOn&&state.mods.starterMax!=null){
-    if(state.starterUses>=state.mods.starterMax) return showToast("Starter reroll limit reached");
-    state.starterUses+=1;
+    const max=state.mods.starterMax||0;
+    if(starterIsItems){
+      if((state.starterItemUses||0)>=max) return showToast("Item starter reroll limit reached");
+      state.starterItemUses=(state.starterItemUses||0)+1;
+    } else {
+      if((state.starterUses||0)>=max) return showToast("Skill starter reroll limit reached");
+      state.starterUses=(state.starterUses||0)+1;
+    }
   }
   if(state.rerolls>0){state.rerolls-=1;showToast("Rerolled (−1 token)");}
-  else showToast("Rerolled");
+  else showToast(starterIsItems?"Item starter rerolled":"Skill starter rerolled");
   save(); updateStatus();
-  drawStarter(false);
+  if(starterIsItems) drawItemStarter(false); else drawStarter(false);
+}
+function getCombatWeapons(){
+  const out=[]; const seen=new Set(); const picked=new Set(state.itemPicked||[]);
+  const add=it=>{ if(it&&!seen.has(it)&&!picked.has(it)){ seen.add(it); out.push(it); } };
+  let any=false;
+  (state.picked||[]).forEach(sk=>{
+    const list=(typeof COMBAT_STARTER_ITEMS!=="undefined" && COMBAT_STARTER_ITEMS[sk])||[];
+    if(list.length) any=true;
+    list.forEach(add);
+  });
+  if(!any && typeof COMBAT_STARTER_ITEMS!=="undefined"){
+    Object.values(COMBAT_STARTER_ITEMS).forEach(list=>list.forEach(add));
+  }
+  return out;
+}
+function getGeneralStarterItems(excludeNames){
+  const ex=new Set(excludeNames||[]);
+  const picked=new Set(state.itemPicked||[]);
+  // From remaining pool (packs or loose)
+  const fromPool=(state.itemRemaining||[]).filter(x=>!ex.has(x)&&!picked.has(x));
+  return fromPool;
+}
+function drawItemStarter(full){
+  const weapons=getCombatWeapons();
+  const locked=starterCards.filter(c=>c.locked).map(c=>c.name);
+  if(full){
+    const picks=[];
+    // Always try to include 1 usable combat weapon
+    const w=shuffle(weapons);
+    if(w.length) picks.push(w[0]);
+    const restPool=shuffle(getGeneralStarterItems(picks).concat(w.slice(1).filter(x=>!picks.includes(x))));
+    while(picks.length<STARTER_COUNT && restPool.length){
+      picks.push(restPool.shift());
+    }
+    // still short? pad from any remaining weapons
+    while(picks.length<STARTER_COUNT && w.length){
+      const n=w.find(x=>!picks.includes(x));
+      if(!n) break;
+      picks.push(n);
+    }
+    starterCards=picks.map(n=>({name:n,locked:false,weighted:false}));
+  } else {
+    const need=starterCards.filter(c=>!c.locked).length;
+    const exclude=locked.slice();
+    const pool=shuffle(getGeneralStarterItems(exclude).concat(getCombatWeapons().filter(x=>!exclude.includes(x))));
+    let i=0;
+    starterCards=starterCards.map(c=>{
+      if(c.locked) return c;
+      if(i<pool.length){ const n=pool[i++]; return {name:n,locked:false,weighted:false}; }
+      return c;
+    });
+  }
+  renderStarter();
+}
+function startCombatItems(){
+  if(!(state.mods&&state.mods.itemDraft)) return showToast("Enable Item Draft");
+  if(!state.starterItemToken) return showToast("Starter Items already used — Death/Full Reset to restore");
+  const weapons=getCombatWeapons();
+  const general=getGeneralStarterItems([]);
+  if(!weapons.length && !general.length) return showToast("No starter items available");
+  starterMode=true; starterIsItems=true; generateCards=[]; pendingSelect=null; hideConfirm();
+  $("starterBar").classList.add("active"); starterCards=[];
+  const ht=$("starterBar")&&$("starterBar").querySelector(".hint-text");
+  if(ht) ht.textContent="Starter Items · 1 combat weapon when possible · lock / reroll / finalize ("+STARTER_COUNT+")";
+  state.starterItemToken=false;
+  save(); updateStatus();
+  drawItemStarter(true);
+  showToast("Starter Items — lock what you want, then Finalize");
 }
 function finalizeStarter(){
   if(!starterMode||!starterCards.length) return;
   const names=starterCards.map(c=>c.name);
+  if(starterIsItems){
+    names.forEach(n=>{
+      if(!state.itemPicked.includes(n)) state.itemPicked.push(n);
+      state.itemRemaining=state.itemRemaining.filter(x=>x!==n);
+      if(state.mods&&state.mods.itemMode==="packed" && typeof ITEM_PACKS!=="undefined"){
+        Object.keys(ITEM_PACKS).forEach(pk=>{
+          if((ITEM_PACKS[pk]||[]).includes(n)) state.itemRemaining=state.itemRemaining.filter(x=>x!==pk);
+        });
+      }
+    });
+    exitStarterMode();
+    cardsEl.innerHTML=`<p class="empty">Starter Items locked: ${names.join(", ")}</p>`;
+    save(); updateStatus(); renderPicked();
+    showToast("Starter Items: "+names.join(", "));
+    return;
+  }
   names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
   exitStarterMode();
+  state.starterToken=false;
   cardsEl.innerHTML=`<p class="empty">Finalized! ${names.length} card(s)</p>`;
   save(); updateStatus(); renderPicked(); showToast("Finalized: "+names.join(", "));
+  if(state.mods&&state.mods.itemDraft && state.starterItemToken){
+    showToast("Starter Items available");
+  }
+}
+function buyItemCharge(){
+  if(!(state.mods&&state.mods.goldItems&&state.mods.itemDraft)) return;
+  const cost=typeof ITEM_CHARGE_COST!=="undefined"?ITEM_CHARGE_COST:500;
+  if((state.spendableCoins||0)<cost) return showToast("Need "+cost+" coins");
+  state.spendableCoins-=cost;
+  state.coinsSpent=(state.coinsSpent||0)+cost;
+  state.itemCharges=(state.itemCharges||0)+1;
+  save(); updateStatus();
+  showToast("Purchased +1 Item gen roll (−"+cost+" coins)");
+}
+function openManualItem(){
+  if(!(state.mods&&state.mods.itemDraft)) return;
+  const choices=state.itemRemaining.filter(Boolean);
+  if(!choices.length) return showToast("No items left");
+  currentMode="manualItem";
+  $("modalTitle").textContent="Manual Item Pick";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item;
+    b.onclick=()=>{
+      state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+      if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
+      closeModal(); save(); updateStatus(); renderPicked();
+      showToast("Item added: "+item);
+    };
+    $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
+function renderItemMilestones(){
+  const el=$("itemMilestoneSlots"); if(!el) return;
+  if(!Array.isArray(state.itemMilestones)) state.itemMilestones=Array(MAX_MILESTONE_SLOTS).fill(null);
+  if($("itemSlotCountLabel")) $("itemSlotCountLabel").textContent=`(${state.itemMilestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+  el.innerHTML="";
+  for(let i=0;i<MAX_MILESTONE_SLOTS;i++){
+    const slot=document.createElement("div");
+    const locked=i>=state.unlockedSlots;
+    const val=state.itemMilestones[i];
+    if(locked){ slot.className="slot"; slot.innerHTML=`<span class="empty-label">Locked</span>`; }
+    else if(val){
+      slot.className="slot filled";
+      slot.innerHTML=`${val} <button class="slot-remove" data-i="${i}">✓</button>`;
+      slot.querySelector("button").onclick=(e)=>{
+        e.stopPropagation();
+        const n=state.itemMilestones[i];
+        state.itemMilestones[i]=null;
+        if(n&&!state.itemPicked.includes(n)) state.itemPicked.push(n);
+        state.itemRemaining=state.itemRemaining.filter(x=>x!==n);
+        save(); renderItemMilestones(); renderPicked(); updateStatus(); showToast("Claimed item: "+n);
+      };
+    } else {
+      slot.className="slot"; slot.innerHTML=`<span class="empty-label">Empty</span>`;
+      slot.onclick=()=>{
+        const choices=state.itemRemaining.filter(Boolean);
+        if(!choices.length) return showToast("No items to bank");
+        currentMode="itemMilestone";
+        window._itemMilestoneIdx=i;
+        $("modalTitle").textContent="Bank Item in Slot";
+        $("pickList").innerHTML="";
+        choices.forEach(item=>{
+          const b=document.createElement("button"); b.textContent=item;
+          b.onclick=()=>{
+            state.itemMilestones[window._itemMilestoneIdx]=item;
+            state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+            closeModal(); save(); renderItemMilestones(); updateStatus(); showToast("Banked: "+item);
+          };
+          $("pickList").appendChild(b);
+        });
+        modal.classList.add("open");
+      };
+    }
+    el.appendChild(slot);
+  }
 }
 
 function renderBanSelect(){
@@ -1273,6 +1660,10 @@ function syncModUI(){
   if($("modDraftReroll")) $("modDraftReroll").checked=!!state.mods.draftReroll;
   if($("modQuests")) $("modQuests").checked=!!state.mods.questsEnabled;
   if($("modQuestCd")) $("modQuestCd").value=state.mods.questCooldownMinutes||60;
+  if($("modGoldItems")) $("modGoldItems").checked=!!state.mods.goldItems;
+  if($("modProfessions")) $("modProfessions").checked=!!state.mods.professions;
+  if($("modGatherSkill")) $("modGatherSkill").value=state.mods.gatherSkill||"Mining";
+  if($("modCraftSkill")) $("modCraftSkill").value=state.mods.craftSkill||"Blacksmith";
 }
 function syncEditUI(){
   $("editCharges").value=state.generateCharges;
@@ -1283,6 +1674,7 @@ function syncEditUI(){
   $("editRerolls").value=state.rerolls;
   $("editPrestige").value=state.prestige;
   $("editStarterUses").value=state.starterUses;
+  if($("editStarterItemUses")) $("editStarterItemUses").value=state.starterItemUses||0;
 }
 function applyEditValues(){
   state.generateCharges=Math.max(0,parseInt($("editCharges").value,10)||0);
@@ -1293,6 +1685,7 @@ function applyEditValues(){
   state.rerolls=Math.max(0,parseInt($("editRerolls").value,10)||0);
   state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
   state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
+  if($("editStarterItemUses")) state.starterItemUses=Math.max(0,parseInt($("editStarterItemUses").value,10)||0);
   save(); updateStatus(); renderMilestones();
   showToast("Values updated");
 }
@@ -1424,15 +1817,9 @@ function rollQuestCount(def){
   const b=Math.max(a, parseInt(def.countMax,10)||a);
   return a + Math.floor(Math.random()*(b-a+1));
 }
-function generateQuest(){
-  if(!(state.mods&&state.mods.questsEnabled)) return showToast("Enable Quests in Modifiers");
-  if(questOnCooldown()) return showToast("Quest on cooldown");
-  if(state.quest) return showToast("Finish or skip your current quest first");
-  const pool=QUEST_DEFS.filter(questEligible);
-  if(!pool.length) return showToast("No quests available for your drafted skills");
-  const def=pool[Math.floor(Math.random()*pool.length)];
+function makeQuestInstance(def){
   const count=rollQuestCount(def);
-  state.quest={
+  return {
     defId: def.id,
     type: def.type,
     title: (def.title||"").replace(/\{x\}/gi, String(count)),
@@ -1441,8 +1828,25 @@ function generateQuest(){
     reward: def.reward?{...def.reward}: {kind:"xp", value:0},
     requires: def.requires?[...def.requires]:[]
   };
+}
+function generateQuest(){
+  if(!(state.mods&&state.mods.questsEnabled)) return showToast("Enable Quests in Modifiers");
+  if(questOnCooldown()) return showToast("Quest on cooldown");
+  if(state.quest) return showToast("Finish or skip your current quest first");
+  if(state.questChoices&&state.questChoices.length) return showToast("Pick one of the offered quests first");
+  const pool=shuffle(QUEST_DEFS.filter(questEligible));
+  if(!pool.length) return showToast("No quests available for your level/skills");
+  state.questChoices=pool.slice(0,Math.min(3,pool.length)).map(makeQuestInstance);
+  state.quest=null;
   save(); renderQuestLog(); updateQuestButton();
-  showToast("Quest assigned: "+state.quest.title);
+  showToast("Choose 1 of "+state.questChoices.length+" quests");
+}
+function acceptQuestChoice(idx){
+  if(!state.questChoices||!state.questChoices[idx]) return;
+  state.quest=state.questChoices[idx];
+  state.questChoices=null;
+  save(); renderQuestLog();
+  showToast("Quest accepted: "+state.quest.title);
 }
 function chainMultiplier(){
   // Bonus applies on the Nth completion in a row (e.g. 10th), then streak resets
@@ -1471,7 +1875,14 @@ function completeQuest(){
       }
     }
     if(state.level>=maxL) state.xp=0;
-    msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
+    if(state.mods&&state.mods.goldItems){
+      const c=Math.ceil(xp*(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25));
+      state.totalCoins=(state.totalCoins||0)+c;
+      state.spendableCoins=(state.spendableCoins||0)+c;
+      msg=`+${xp} XP · +${c} coins`+(mult>1?` (${mult}× chain)`:"");
+    } else {
+      msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
+    }
   } else if(q.reward.kind==="xp_pct"){
     // Typed XP (from kills) is granted in full, plus percentage bonus (chain multiplies the bonus only)
     const baseXp=Math.max(0, parseInt(($("questXpEarned")&&$("questXpEarned").value)||"0",10)||0);
@@ -1491,7 +1902,15 @@ function completeQuest(){
       }
     }
     if(state.level>=maxL) state.xp=0;
-    msg=`+${xp} XP (${baseXp} + ${bonus} bonus)`+(mult>1?` (bonus ${mult}× chain)`:"");
+    // quests deposit 25% of entered kill XP as spendable coins (when gold items on)
+    if(state.mods&&state.mods.goldItems && baseXp>0){
+      const c=Math.ceil(baseXp*(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25));
+      state.totalCoins=(state.totalCoins||0)+c;
+      state.spendableCoins=(state.spendableCoins||0)+c;
+      msg=`+${xp} XP (${baseXp} + ${bonus} bonus) · +${c} coins`+(mult>1?` (bonus ${mult}× chain)`:"");
+    } else {
+      msg=`+${xp} XP (${baseXp} + ${bonus} bonus)`+(mult>1?` (bonus ${mult}× chain)`:"");
+    }
   } else {
     msg="Quest complete";
   }
@@ -1507,9 +1926,10 @@ function completeQuest(){
   showToast(msg+" · chain "+streakMsg);
 }
 function skipQuest(){
-  if(!state.quest) return;
+  if(!state.quest && !(state.questChoices&&state.questChoices.length)) return;
   if(!confirm("Skip quest? This resets your quest chain streak.")) return;
   state.quest=null;
+  state.questChoices=null;
   state.questStreak=0;
   state.questCooldownUntil=Date.now()+questCooldownMs();
   save(); renderQuestLog(); updateQuestButton();
@@ -1532,6 +1952,17 @@ function renderQuestLog(){
   const chainNote = nextBonus <= 0
     ? `Chain ready — next quest gets ×${QUEST_CHAIN_BONUS_MULT}, then resets`
     : `Chain <strong>${streak}</strong> / ${QUEST_CHAIN_BONUS_AT} — bonus on the ${QUEST_CHAIN_BONUS_AT}th, then resets`;
+  if(state.questChoices&&state.questChoices.length){
+    body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose one quest:</p>`+
+      state.questChoices.map((q,i)=>`<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
+        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":"Slaying"} · ${(q.description||"").slice(0,80)}</span>
+      </button>`).join("")+
+      `<div class="ql-actions" style="margin-top:.5rem"><button class="ql-skip" id="questSkipBtn">Skip Offers</button></div>
+      <div class="ql-chain">${chainNote}</div>`;
+    body.querySelectorAll("[data-qpick]").forEach(b=>b.onclick=()=>acceptQuestChoice(+b.dataset.qpick));
+    const s=$("questSkipBtn"); if(s) s.onclick=skipQuest;
+    return;
+  }
   if(!state.quest){
     body.innerHTML=`<p class="ql-empty">No active quest. Press <strong>Generate Quest</strong> when ready.</p>
       <div class="ql-chain">${chainNote}</div>`;
@@ -1549,7 +1980,6 @@ function renderQuestLog(){
     const pct=Math.round((q.reward.value||0)*100);
     rewardLine=`Reward: <strong>XP you enter</strong> + <strong>${pct}%</strong> bonus`+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
   }
-  const req=(q.requires||[]).join(", ")||"None";
   const xpField=q.reward.kind==="xp_pct"
     ? `<input class="ql-xp" id="questXpEarned" type="number" min="0" placeholder="XP earned from kills (full amount + bonus applied)">`
     : "";
@@ -1557,7 +1987,7 @@ function renderQuestLog(){
     <span class="ql-type ${type}">${typeLabel}</span>
     <div class="ql-title">${q.title}</div>
     <div class="ql-desc">${q.description||""}</div>
-    <div class="ql-meta">${rewardLine}<br>Requires (any one): <strong>${req}</strong></div>
+    <div class="ql-meta">${rewardLine}</div>
     ${xpField}
     <div class="ql-actions">
       <button class="ql-complete" id="questCompleteBtn">Finish</button>
@@ -1568,14 +1998,18 @@ function renderQuestLog(){
   const s=$("questSkipBtn"); if(s) s.onclick=skipQuest;
 }
 
-function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();syncModUI();renderQuestLog();ensureQuestTimer();}
+function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();if(typeof renderItemMilestones==="function")renderItemMilestones();syncModUI();renderQuestLog();ensureQuestTimer();}
 
 function bind(id, fn){ const el=$(id); if(!el){ console.warn("missing #"+id); return; } el.onclick=fn; }
 bind("starterBtn", startStarter);
 bind("generate", ()=>generate("skill"));
 bind("generateItem", ()=>generate("item"));
+bind("manualItemBtn", openManualItem);
+bind("startItemsBtn", startCombatItems);
+bind("buyItemChargeBtn", buyItemCharge);
 bind("questBtn", generateQuest);
 bind("confirmLockBtn", confirmSelection);
+bind("confirmBuyBtn", confirmAndBuyAnother);
 bind("manualPick", ()=>openPickModal("manual"));
 bind("banBtn", ()=>{renderBanSelect();renderBans();$("banModal").classList.add("open");});
 bind("banClose", ()=>$("banModal").classList.remove("open"));
