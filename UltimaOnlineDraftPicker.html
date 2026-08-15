@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Draft Picker</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f13;color:#e8e8ed;min-height:100vh;padding:2rem 1rem 3.5rem}
+    body{display:flex;flex-direction:column;align-items:center}
+    .app-shell{display:contents}
+    .main-col{display:contents}
+    .quest-rail{
+      position:fixed; right:16px; top:120px;
+      width:300px; z-index:40;
+      pointer-events:none;
+    }
+    .quest-rail .quest-log{pointer-events:auto}
+    @media (max-width: 1100px){
+      .quest-rail{right:8px; width:260px; top:110px}
+    }
+    /* Below this, dock quest log under content so it never shoves the center column */
+    @media (max-width: 960px){
+      .quest-rail{
+        position:static; width:100%; max-width:700px;
+        margin:1.25rem auto 0; right:auto; top:auto;
+        pointer-events:auto;
+      }
+    }
+    .quest-log{
+      background:linear-gradient(165deg,#1a1814 0%,#12141c 55%,#16161d 100%);
+      border:1px solid #3d3420;border-radius:16px;padding:1.1rem 1.15rem 1.2rem;
+      box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(241,196,15,.08);
+      font-family:Constantia,Georgia,"Times New Roman",serif;
+      min-height:220px;
+    }
+    .quest-log h2{font-family:system-ui,-apple-system,sans-serif;font-size:.95rem;color:#c9a227;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.75rem;font-weight:700}
+    .quest-log .ql-empty{color:#6a6558;font-style:italic;font-size:.92rem;line-height:1.45}
+    .quest-log .ql-type{display:inline-block;font-size:.68rem;font-weight:700;font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .5rem;border-radius:999px;margin-bottom:.55rem}
+    .quest-log .ql-type.kill{background:#3d1f1f;color:#f88}
+    .quest-log .ql-type.craft{background:#1f3d2a;color:#7dcea0}
+    .quest-log .ql-title{font-size:1.15rem;color:#f5e6c8;font-weight:700;margin-bottom:.45rem;line-height:1.3}
+    .quest-log .ql-desc{font-size:.9rem;color:#b8a88a;line-height:1.5;margin-bottom:.7rem}
+    .quest-log .ql-meta{font-size:.82rem;color:#8a7f6a;line-height:1.55;margin-bottom:.75rem;font-family:system-ui,sans-serif}
+    .quest-log .ql-meta strong{color:#c9a227}
+    .quest-log .ql-actions{display:flex;flex-wrap:wrap;gap:.4rem}
+    .quest-log .ql-actions button{font-family:system-ui,sans-serif;font-size:.8rem;padding:.45rem .75rem;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .quest-log .ql-complete{background:#00b894;color:#fff}
+    .quest-log .ql-skip{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
+    .quest-log .ql-chain{margin-top:.85rem;padding-top:.7rem;border-top:1px solid #2a2a35;font-size:.78rem;color:#888;font-family:system-ui,sans-serif}
+    .quest-log .ql-xp{width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem .55rem;border-radius:8px;font-size:.85rem;margin-bottom:.5rem;font-family:system-ui,sans-serif}
+    #questBtn{background:#8e6b2a;color:#f5e6c8;border:1px solid #c9a227}
+    #questBtn:hover:not(:disabled){background:#a47c30}
+    #questBtn.cooldown{background:#2d2d38;color:#aaa;border-color:#444;min-width:140px;justify-content:center}
+    #questBtn.show{display:inline-flex}
+    #questBtn{display:none}
+
+    .landing{
+      position:fixed;inset:0;z-index:200;background:radial-gradient(ellipse at 50% 20%,#1a1a28 0%,#0f0f13 55%,#0a0a0e 100%);
+      display:flex;align-items:center;justify-content:center;padding:1.5rem;
+    }
+    .landing.hidden{display:none}
+    .landing-card{
+      width:100%;max-width:480px;background:#16161d;border:1px solid #2a2a35;border-radius:18px;
+      padding:1.6rem 1.5rem 1.4rem;box-shadow:0 20px 50px rgba(0,0,0,.45);
+    }
+    .landing-card h1{font-size:1.55rem;margin-bottom:.25rem;text-align:center}
+    .landing-card .sub{text-align:center;color:#888;font-size:.88rem;margin-bottom:1.2rem;line-height:1.45}
+    .landing-list{display:flex;flex-direction:column;gap:.45rem;max-height:42vh;overflow-y:auto;margin-bottom:1rem}
+    .landing-slot{
+      background:#1c1c24;border:1px solid #2a2a35;border-radius:12px;padding:.75rem .9rem;
+      display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;cursor:pointer;
+      transition:border-color .15s,background .15s;
+    }
+    .landing-slot:hover{border-color:#6c5ce7;background:#22222e}
+    .landing-slot .meta{font-size:.78rem;color:#888;margin-top:.15rem}
+    .landing-slot button{padding:.4rem .75rem;font-size:.8rem;background:#6c5ce7;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+    .landing-new{display:flex;gap:.5rem;flex-wrap:wrap}
+    .landing-new input{flex:1;min-width:140px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.55rem .7rem;border-radius:10px}
+    .landing-new button{background:#00b894;color:#fff;border:none;padding:.55rem 1rem;border-radius:10px;font-weight:600;cursor:pointer}
+    #githubBtn{background:#24292f;color:#e6edf3;border:1px solid #3d444d}
+    #githubBtn:hover{background:#32383f}
+    .link-modal code{display:block;word-break:break-all;background:#0d1117;border:1px solid #30363d;padding:.65rem .75rem;border-radius:8px;font-size:.8rem;color:#58a6ff;margin:.75rem 0}
+    .link-modal p{font-size:.88rem;color:#bbb;line-height:1.5;margin-bottom:.55rem}
+    h1{font-size:1.8rem;margin-bottom:.3rem;letter-spacing:-.02em}
+    p.sub{color:#888;margin-bottom:1.3rem;font-size:.9rem;text-align:center;max-width:560px;line-height:1.45}
+    .controls{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem}
+    button,label.file-btn{border:none;padding:.6rem 1rem;font-size:.85rem;font-weight:600;border-radius:10px;cursor:pointer;transition:background .2s,transform .15s,opacity .2s;display:inline-flex;align-items:center}
+    button:active,label.file-btn:active{transform:translateY(1px)}
+    button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    #generate{background:#6c5ce7;color:#fff}
+    #generate:hover:not(:disabled){background:#5a4bd1}
+    #generateItem{background:#9b59b6;color:#fff;display:none}
+    #generateItem.show{display:inline-flex}
+    #generateItem:hover:not(:disabled){background:#8e44ad}
+    #starterBtn{background:#0984e3;color:#fff}
+    #starterBtn:hover:not(:disabled){background:#0770c2}
+    #manualPick{background:#e17055;color:#fff}
+    #manualPick:hover:not(:disabled){background:#d16045}
+    #banBtn{background:#636e72;color:#fff}
+    #banBtn:hover{background:#555f63}
+    #modBtn{background:#2d3436;color:#dfe6e9;border:1px solid #636e72}
+    #modBtn:hover{background:#3d4548}
+    #customBtn{background:#a29bfe;color:#1a1a2e}
+    #customBtn:hover{background:#8b83e8}
+    #export{background:#00b894;color:#fff}
+    #export:hover{background:#00a884}
+    #reset{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
+    #reset:hover{background:#3a3a48;color:#fff}
+    #deathReset{background:#5c2a2a;color:#f88;border:1px solid #833}
+    #deathReset:hover{background:#6e3333}
+    #prestigeBtn{background:#f1c40f;color:#1a1a2e;display:none}
+    #prestigeBtn:hover{background:#e0b40a}
+    #prestigeBtn.show{display:inline-flex}
+    #rerollBtn{background:#fdcb6e;color:#1a1a2e}
+    #finalizeBtn{background:#00cec9;color:#0a1a1a}
+    #confirmLockBtn{background:#00cec9;color:#0a1a1a;}
+    label.file-btn{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
+    label.file-btn:hover{background:#3a3a48;color:#fff}
+    input[type=file]{display:none}
+    .status{font-size:.86rem;color:#777;margin-bottom:.85rem;text-align:center;line-height:1.6}
+    .status strong{color:#aaa}
+    .xp-panel{width:100%;max-width:520px;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.1rem}
+    .xp-panel h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
+    .xp-row{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.3rem}
+    .xp-bar{height:10px;background:#1c1c24;border-radius:5px;overflow:hidden;margin-bottom:.35rem}
+    .xp-bar>div{height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:5px;transition:width .3s}
+    .total-xp{font-size:.8rem;color:#666;margin-bottom:.65rem}
+    .total-xp strong{color:#888}
+    .xp-add{display:flex;gap:.5rem;align-items:center}
+    .xp-add input{flex:1;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.45rem .6rem;border-radius:8px;font-size:.9rem}
+    .xp-add button{background:#6c5ce7;color:#fff;padding:.45rem .9rem}
+    .starter-bar{display:none;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem;padding:.65rem 1rem;background:#16161d;border:1px solid #2a2a35;border-radius:12px;width:100%;max-width:620px}
+    .starter-bar.active{display:flex}
+    .starter-bar .hint-text{width:100%;text-align:center;font-size:.8rem;color:#888;margin-bottom:.15rem}
+    .cards{display:flex;flex-wrap:wrap;gap:1.1rem;justify-content:center;max-width:980px;width:100%;min-height:130px}
+    .card{background:#1c1c24;border:1px solid #2a2a35;border-radius:16px;padding:1.3rem 1.1rem 1rem;width:220px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;position:relative}
+    .card:hover{border-color:#6c5ce7;transform:translateY(-3px);box-shadow:0 8px 20px rgba(108,92,231,.15)}
+    .card.pending{border-color:#74b9ff;box-shadow:0 0 0 2px #74b9ff}
+    .card.selected{border-color:#00cec9;box-shadow:0 0 0 2px #00cec9;pointer-events:none}
+    .card.locked{border-color:#00cec9;box-shadow:0 0 0 2px #00cec9;background:#152525}
+    .card.locked .hint{color:#00cec9}
+    .card.freepick{border-color:#fdcb6e;background:#1f1c16}
+    .card.weighted{border-color:#f1c40f;background:linear-gradient(145deg,#2a2410,#1c1c24);box-shadow:0 0 12px rgba(241,196,15,.45);animation:goldPulse 2.2s ease-in-out infinite}
+    @keyframes goldPulse{0%,100%{box-shadow:0 0 12px rgba(241,196,15,.4)}50%{box-shadow:0 0 18px rgba(241,196,15,.7)}}
+    .card .badge{position:absolute;top:8px;right:10px;font-size:.65rem;font-weight:700;color:#f1c40f;text-transform:uppercase}
+    .card .number{position:absolute;top:10px;left:12px;font-size:.75rem;color:#666;font-weight:600}
+    .card .name{font-size:1.08rem;font-weight:600;margin:.35rem 0;line-height:1.3}
+    .card .hint{font-size:.78rem;color:#666}
+    .card .reroll-one{margin-top:.5rem;background:#2d2d38;color:#fdcb6e;border:1px solid #4a4030;padding:.3rem .6rem;font-size:.75rem;border-radius:6px;width:100%}
+    .card .reroll-one:disabled{opacity:.35}
+    .empty{color:#555;font-style:italic;width:100%;text-align:center;padding:1.5rem 0}
+    .panel{width:100%;max-width:700px;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:1.05rem 1.2rem;margin-top:1.5rem}
+    .panel h2{font-size:1.05rem;color:#aaa;margin-bottom:.65rem;font-weight:600}
+    .panel .hint{font-size:.8rem;color:#666;margin-bottom:.65rem}
+    .slots{display:flex;flex-wrap:wrap;gap:.5rem}
+    .slot{min-width:110px;min-height:52px;background:#1c1c24;border:1px dashed #3d3d4a;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:.4rem .6rem;font-size:.85rem;cursor:pointer;text-align:center}
+    .slot:hover{border-color:#6c5ce7}
+    .slot.filled{border-style:solid;border-color:#00cec9;color:#00cec9;background:#1a2a28}
+    .slot.empty-label{color:#555;font-size:.78rem}
+    .picked-list{display:flex;flex-wrap:wrap;gap:.45rem}
+    .picked-item{background:#1a2a28;border:1px solid #1e4a44;color:#00cec9;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;font-weight:500}
+    .ban-item{background:#2a1a1a;border:1px solid #5a2a2a;color:#f88;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;display:inline-flex;align-items:center;gap:.4rem}
+    .ban-item button,.slot-remove{background:transparent;border:none;color:inherit;cursor:pointer;font-size:.85rem;padding:0;opacity:.7}
+    .no-picked{color:#555;font-size:.9rem;font-style:italic}
+    .ban-list{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.55rem}
+    .ban-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;align-items:center}
+    .ban-controls select{background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem .55rem;border-radius:8px;font-size:.85rem}
+    .mod-row{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.75rem;font-size:.9rem}
+    .mod-row input[type=checkbox]{margin-top:.2rem;width:16px;height:16px;accent-color:#6c5ce7}
+    .mod-row input[type=number]{width:70px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.3rem .45rem;border-radius:6px;font-size:.85rem}
+    .mod-row .sub{font-size:.78rem;color:#666;margin-top:.15rem}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+    .modal-overlay.open{display:flex}
+    .modal{background:#1c1c24;border:1px solid #3d3d4a;border-radius:16px;width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+    .modal header{padding:1rem 1.15rem;border-bottom:1px solid #2a2a35;font-weight:600;font-size:1.05rem}
+    .modal .body{padding:1rem 1.15rem;overflow-y:auto;flex:1}
+    .modal .list{display:flex;flex-direction:column;gap:.35rem}
+    .modal .list button{background:#252530;color:#e8e8ed;border:1px solid #333;text-align:left;padding:.6rem .9rem;border-radius:8px;font-size:.9rem;width:100%}
+    .modal .list button:hover{background:#6c5ce7;border-color:#6c5ce7}
+    .modal footer{padding:.75rem 1.15rem;border-top:1px solid #2a2a35;display:flex;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}
+    .modal footer button{background:transparent;color:#888;border:1px solid #3d3d4a;padding:.45rem .9rem;font-size:.85rem}
+    .modal footer button.primary{background:#6c5ce7;color:#fff;border-color:#6c5ce7}
+    .modal textarea{width:100%;min-height:110px;background:#16161d;border:1px solid #333;border-radius:10px;color:#e8e8ed;padding:.65rem;font-size:.92rem;resize:vertical;font-family:inherit;margin-bottom:.65rem}
+    .toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1c24;border:1px solid #3d3d4a;color:#e8e8ed;padding:.65rem 1.2rem;border-radius:10px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #confirmBar button{border:none;border-radius:10px;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+<div class="landing" id="landing">
+  <div class="landing-card">
+    <h1>Random Draft Picker</h1>
+    <p class="sub">Select a character save to continue, or create a new one.</p>
+    <div class="landing-list" id="landingList"></div>
+    <div class="landing-new">
+      <input type="text" id="landingNewName" placeholder="New character name">
+      <button type="button" id="landingCreateBtn">Create &amp; Play</button>
+    </div>
+  </div>
+</div>
+<div class="app-shell"><div class="main-col">
+  <h1>Random Draft Picker</h1>
+  <p class="sub">Generate charges from leveling · Confirm to lock · Modifiers control rules<br>Starter = lock / reroll / finalize · Golden = weighted prereq card</p>
+  <div class="controls">
+    <button id="starterBtn" title="Open a starter hand: lock cards, reroll unlocked, then finalize into your draft">Starter Draft</button>
+    <button id="generate" title="Spend 1 Generate charge to roll 3 skills — select one and Confirm">Generate 3 Skills</button>
+    <button id="generateItem" title="Spend 1 Generate charge to roll 3 items (enable in Modifiers)">Generate 3 Items</button>
+    <button id="questBtn" title="Roll a quest for extra XP/rewards (no Generate charge). Cooldown applies after claim/skip.">Generate Quest</button>
+    <button id="manualPick" title="Manually add any available skill to your draft">Manual Pick</button>
+    <button id="banBtn" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
+    <button id="modBtn" title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
+    <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
+    <button id="customBtn" title="One-off random pick from a temporary list (not saved to draft)">Custom Random</button>
+    <button id="githubBtn" title="Python XP / avatar coin tracker for in-game use">XP Tracker Script</button>
+    <button id="export" title="Export only the currently active save slot as JSON">Export Save</button>
+    <label class="file-btn" title="Import JSON into the currently active save slot only">Import Save<input type="file" id="import" accept=".json,application/json"></label>
+    <button id="deathReset" title="Return drafted skills/items to the pool and restore Generate charges from your level">Death Reset</button>
+    <button id="prestigeBtn" title="Available at max level: soft-reset draft, level 1, +5 rerolls">Prestige</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div class="xp-panel">
+    <h2>Level &amp; Experience</h2>
+    <div class="xp-row"><span>Level <strong id="levelDisplay">1</strong> / 100</span><span id="xpText">0 / 500 XP</span></div>
+    <div class="xp-bar"><div id="xpBarFill" style="width:0%"></div></div>
+    <div class="total-xp">Total XP earned: <strong id="totalXpDisplay">0</strong></div>
+    <div class="xp-add">
+      <input type="number" id="xpInput" min="1" placeholder="XP gained this session">
+      <button id="addXpBtn" title="Add session XP toward leveling and Generate charges">Add XP</button>
+    </div>
+    <p style="font-size:.78rem;color:#666;margin-top:.5rem">XP scales with level &amp; prestige. Generate charges from leveling (interval set in Modifiers).</p>
+  </div>
+  <div class="starter-bar" id="starterBar">
+    <div class="hint-text">Click cards to lock/unlock · Reroll unlocked · Finalize</div>
+    <button id="rerollBtn">Reroll Unlocked</button>
+    <button id="finalizeBtn">Finalize Draft</button>
+  </div>
+  <div class="cards" id="cards"><p class="empty">Use Starter Draft, or earn Generate charges by leveling</p></div>
+  <div id="confirmBar" style="display:none;width:100%;max-width:700px;margin:1.1rem auto 0;text-align:center;position:relative;z-index:5;">
+    <button id="confirmLockBtn" type="button" style="background:#00cec9;color:#0a1a1a;padding:.7rem 1.6rem;font-size:1rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 16px rgba(0,206,201,.35);">Confirm Selection</button>
+  </div>
+
+  </div>
+  <div class="panel">
+    <h2>Milestone RewardSlots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
+    <p class="hint">Slots unlock with prestige (P1=1, P2=2…). Empty = bank · Filled ✓ = claim.</p>
+    <div class="slots" id="milestoneSlots"></div>
+  </div>
+  <div class="panel">
+    <h2>Picked so far</h2>
+    <div class="picked-list" id="pickedList"><span class="no-picked">Nothing picked yet</span></div>
+  </div>
+
+  <div class="panel" id="toolsPanel">
+    <h2>Tools</h2>
+    <p class="hint">Named saves are stored in this browser (localStorage). Export writes a JSON file you choose (Chrome/Edge can overwrite). Import only updates the active save.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+      <button id="editBtn" style="background:#636e72;color:#fff;" title="Manually set charges, level, XP, rerolls, prestige">Edit Values</button>
+      <button id="resetQuestCd" style="background:#8e6b2a;color:#f5e6c8;" title="Clear the quest generate cooldown timer">Reset Quest Cooldown</button>
+      <button id="reset" style="background:#5c2a2a;color:#f88;border:1px solid #833;" title="Wipe the CURRENT save slot only back to defaults">Full Reset (this save)</button>
+    </div>
+  </div>
+</div><!-- /main-col -->
+
+  <aside class="quest-rail" id="questRail" style="display:none">
+    <div class="quest-log" id="questLog">
+      <h2>Quest Log</h2>
+      <div id="questLogBody"><p class="ql-empty">No active quest. Enable Quests in Modifiers, then use Generate Quest.</p></div>
+    </div>
+  </aside>
+</div><!-- /app-shell -->
+
+  <div class="modal-overlay" id="savesModal"><div class="modal"><header>Save Slots</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.6rem;">Each name is a separate playthrough. Export/Import only touches the <strong>active</strong> slot. Unlimited slots.</p>
+    <p style="font-size:.82rem;color:#aaa;margin-bottom:.75rem;">Active: <strong id="activeSaveLabel">Default</strong></p>
+    <div class="list" id="savesList"></div>
+    <div style="display:flex;gap:.5rem;margin-top:.85rem;flex-wrap:wrap;">
+      <input type="text" id="newSaveName" placeholder="New save name" style="flex:1;min-width:140px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.45rem .6rem;border-radius:8px;">
+      <button id="createSaveBtn" style="background:#00b894;color:#fff;">Create</button>
+    </div>
+  </div><footer><button id="savesClose">Close</button></footer></div></div>
+
+  <div class="modal-overlay" id="editModal"><div class="modal"><header>Edit Values</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.75rem;">Adjust live state (saved immediately on Apply).</p>
+    <div class="mod-row"><div style="flex:1"><strong>Generate charges</strong><div class="sub">Set exactly how many you have</div>
+      <input type="number" id="editCharges" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Charges spent (tracking)</strong><div class="sub">Used for refresh math — lower this if refresh under-counts</div>
+      <input type="number" id="editChargesSpent" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Level</strong>
+      <input type="number" id="editLevel" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Current XP (toward next level)</strong>
+      <input type="number" id="editXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Total XP earned</strong>
+      <input type="number" id="editTotalXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Reroll tokens</strong>
+      <input type="number" id="editRerolls" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Prestige count</strong>
+      <input type="number" id="editPrestige" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Starter rerolls used</strong>
+      <input type="number" id="editStarterUses" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <button id="editApply" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-top:.5rem;">Apply Changes</button>
+  </div><footer><button id="editClose">Close</button></footer></div></div>
+
+  <div class="modal-overlay" id="pickModal"><div class="modal"><header id="modalTitle">Choose</header><div class="body"><div class="list" id="pickList"></div></div><footer><button id="cancelPick">Cancel</button></footer></div></div>
+
+  <div class="modal-overlay" id="banModal"><div class="modal"><header>Ban Cards</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.7rem">Full = never · Starter only · Generate only. ✕ to unban.</p>
+    <div class="ban-controls">
+      <select id="banCardSelect"></select>
+      <select id="banTypeSelect"><option value="full">Full ban</option><option value="starter">Starter only</option><option value="generate">Generate only</option></select>
+      <button id="banAddBtn" style="background:#e17055;color:#fff">Ban</button>
+    </div>
+    <div class="ban-list" id="banList"><span class="no-picked">No bans</span></div>
+  </div><footer><button id="banClose">Close</button></footer></div></div>
+
+  <div class="modal-overlay" id="modModal"><div class="modal"><header>Modifiers</header><div class="body">
+    <div class="mod-row"><input type="checkbox" id="modIgnorePrereq"><div><strong>Ignore prerequisites</strong><div class="sub">All cards can appear regardless of prereqs</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modCustomInterval"><div><strong>Custom generate interval</strong><div class="sub">Levels between Generate charge awards</div>
+      <input type="number" id="modInterval" min="1" value="4" style="margin-top:.35rem"> levels</div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Charges per award</strong><div class="sub">How many Generate charges you gain each interval (default 1)</div>
+      <input type="number" id="modChargesPer" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Max level</strong><div class="sub">Default 100 — prestige unlocks at this level</div>
+      <input type="number" id="modMaxLevel" min="2" value="100" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited</div>
+      <input type="number" id="modStarterMax" min="1" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
+    <div class="mod-row"><input type="checkbox" id="modItemDraft"><div><strong>Enable Item Draft</strong><div class="sub">Shares Generate charges — choose skill or item roll</div></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Item pool mode</strong><div class="sub">Packed = roll whole packs. Unpacked = individual items only (pack names removed)</div>
+      <select id="modItemMode" style="margin-top:.35rem;width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px;">
+        <option value="packed">Packed</option>
+        <option value="unpacked">Unpacked</option>
+      </select></div></div>
+    <div class="mod-row"><input type="checkbox" id="modDraftReroll"><div><strong>Reroll drafted skills/items</strong><div class="sub">On Picked chips: spend 1 reroll token to return that pick to the pool and gain +1 Generate charge</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modQuests"><div><strong>Enable Quests</strong><div class="sub">Shows Generate Quest — does not use Generate charges</div></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Quest cooldown (minutes)</strong><div class="sub">Default 60 (1 hour) between generating quests</div>
+      <input type="number" id="modQuestCd" min="1" value="60" style="margin-top:.35rem;width:100%"></div></div>
+    <p style="font-size:.8rem;color:#888;margin:1rem 0 .5rem">Apply / Refresh saves modifiers and rebuilds the item pool from packs. Charge refresh only tops up if new rules would grant more (won’t wipe extras you set in Edit).</p>
+    <button id="modRefresh" class="primary" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-bottom:.5rem">Apply / Refresh Rules</button>
+  </div><footer><button id="modClose">Close</button></footer></div></div>
+
+  <div class="modal-overlay" id="customModal"><div class="modal"><header>Custom Random</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.55rem">One per line. Not saved.</p>
+    <textarea id="customInput" placeholder="A&#10;B&#10;C"></textarea>
+    <button id="customPickBtn" style="background:#a29bfe;color:#1a1a2e;width:100%;justify-content:center">Random Pick</button>
+    <div id="customResult" style="margin-top:.7rem;font-size:1.05rem;color:#00cec9;font-weight:600;min-height:1.3rem"></div>
+  </div><footer><button id="customClose">Close</button></footer></div></div>
+
+  <div class="modal-overlay link-modal" id="githubModal"><div class="modal"><header>XP Tracker Script</header><div class="body">
+    <p>This python script is used to track your avatar coin gains as the xp used in this program it runs in tazuo and you can directly copy paste it from the GitHub without downloading it.</p>
+    <p>Open the link yourself when ready:</p>
+    <code id="githubLinkText">https://github.com/Asgria/memento---avatar-coin-tracker---python</code>
+    <p style="font-size:.8rem;color:#888">Copy the URL above, or use the button to copy it to your clipboard. This does not open a new tab automatically.</p>
+    <button type="button" id="githubCopyBtn" style="background:#238636;color:#fff;width:100%;justify-content:center;margin-top:.35rem">Copy link</button>
+  </div><footer><button id="githubClose">Close</button></footer></div></div>
+<div class="toast" id="toast"></div>
+<script>
+// ============================================================
+//  EDITABLE CONSTANTS
+// ============================================================
+const MASTER_LIST = [
+"Alchemy","Anatomy","Druidism","Mercantile","ArmsLore","Parry","Begging","Blacksmith","Bowcraft","Peacemaking",
+"Camping","Carpentry","Cartography","Cooking","Searching","Discordance","Psychology","Healing","Seafaring","Forensics",
+"Herding","Hiding","Provocation","Inscribe","Lockpicking","Magery","MagicResist","Tactics","Snooping","Musicianship",
+"Poisoning","Marksmanship","Spiritualism","Stealing","Tailoring","Taming","Tasting","Tinkering","Tracking","Veterinary",
+"Swords","Bludgeoning","Fencing","FistFighting","Lumberjacking","Mining","Meditation","Stealth","RemoveTrap","Necromancy",
+"Focus","Knightship","Bushido","Ninjitsu","Elementalism","Free Pick"
+];
+const PREREQS = {
+  "Blacksmith":["Mining"],"Tinkering":["Mining"],"Carpentry":["Lumberjacking"],"Bowcraft":["Lumberjacking"],
+  "Magery":["Psychology"],"Necromancy":["Spiritualism"]
+};
+// ============================================================
+//  ITEM PACKS — easy to expand
+//  Packed mode: pool = pack names + loose items
+//  Unpacked mode: pool = every item inside packs + loose (no pack names)
+// ============================================================
+const ITEM_PACKS = {
+  "All Bone Armors": ["Bone Arms", "Bone Chest", "Bone Gloves", "Bone Helm", "Bone Legs", "Bone Skirt", "Orc Helm", "Skeletal Arms", "Skeletal Chest", "Skeletal Gloves", "Skeletal Helm", "Skeletal Legs"],
+  "All Chainmail Armors": ["Chainmail Coif", "Chainmail Tunic", "Chain Hatsuburi", "Chain Leggings", "Chain Skirt"],
+  "All Non-Set Helmets": ["Bascinet", "Close Helm", "Dread Helm", "Helmet", "Norse Helm", "Oniwaban Hood"],
+  "All Footwear": ["Hiking Boots", "Leather Boots", "Oniwaban Boots", "Royal Boots", "Scaly Boots"],
+  "All Leather Armors": ["Female Leather Chest", "Hide Tunic", "Leather Leggings", "Leather Arms", "Leather Bustier", "Leather Cap", "Leather Chest", "Leather Do", "Leather Cloak", "Leather Robe", "Leather Gloves", "Leather Gorget", "Leather Haidate", "Leather Hiro Sode", "Leather Jingasa", "Leather Legs", "Leather Mempo", "Leather Ninja Hood", "Leather Ninja Jacket", "Leather Ninja Mitts", "Leather Ninja Pants", "Leather Shorts", "Leather Skirt", "Leather Suneate", "Oniwaban Gloves", "Oniwaban Leggings", "Oniwaban Tunic", "Leather Shinobi Robe", "Leather Shinobi Hood", "Leather Shinobi Mask", "Shinobi Cowl"],
+  "All Plate Armors": ["Plate Kabuto(Yellow)", "Female Plate Chest", "Heavy Plate Jingasa", "Light Plate Jingasa", "Plate Arms", "Plate Kabuto(Red)", "Plate Chest", "Plate Do", "Plate Gloves", "Plate Gorget", "Plate Haidate", "Plate Hatsuburi", "Plate Helm", "Plate Hiro Sode", "Plate Legs", "Plate Mempo", "Plate Skirt", "Plate Suneate", "Small Plate Jingasa", "Plate Kabuto(Blue)"],
+  "All Ringmail Armors": ["Ringmail Arms", "Ringmail Chest", "Ringmail Gloves", "Ringmail Legs", "Ringmail Skirt"],
+  "All Royal Armors": ["Royal Arms", "Royal Chest", "Royal Gloves", "Royal Gorget", "Royal Helm", "Royal Legs", "Royal Shield"],
+  "All Scale Armor": ["Dragon Arms", "Dragon Chest", "Dragon Gloves", "Dragon Helm", "Dragon Legs", "Drakbone Bracers", "Drakbone Greaves", "Drakbone Gauntlets", "Drakbone Helm", "Drakbone Tunic", "Scaled Arms", "Scaled Chest", "Scaled Gloves", "Scaled Gorget", "Scaled Helm", "Scaled Legs", "Scaled Shield", "Scalemail Shield", "Scaly Arms", "Scaly Chest", "Scaly Gloves", "Scaly Helm", "Scaly Legs"],
+  "All Non-Set Shields": ["Bronze Shield", "Buckler", "Champion Shield", "Chaos Shield", "Crested Shield", "Dark Shield", "Elven Shield", "Guardsman Shield", "Heater Shield", "Jeweled Shield", "Metal Kite Shield", "Metal Shield", "Order Shield", "Sun Shield", "Virtue Shield", "Wooden Kite Shield", "Wooden Shield"],
+  "All Animal Hats": ["bearskin cap", "deerskin cap", "stagskin cap", "wolfskin cap"],
+  "All Studded Armors": ["Female Studded Chest", "Studded Arms", "Studded Bustier", "Studded Chest", "Studded Do", "Studded Gloves", "Studded Gorget", "Studded Haidate", "Studded Hide Chest", "Studded Huri Sode", "Studded Legs", "Studded Mempo", "Studded Skirt", "Studded Suneate"],
+  "All Wooden Armors": ["Wooden Legs", "wooden gauntlets", "wooden gorget", "wooden arms", "wooden tunic", "wooden helm"],
+  "All Axes": ["Axe", "Battle Axe", "Double Axe", "Executioner's Axe", "Hatchet", "Large Battle Axe", "Ornate Axe", "Two Handed Axe", "War axe"],
+  "All Bows": ["Bow", "Composite Bow", "Crossbow", "Elven Composite Longbow", "Heavy Crossbow", "Magical Shortbow", "Repeating Crossbow"],
+  "All Knives": ["Assassin Dagger", "Butcher Knife", "Cleaver", "Dagger", "Large Knife", "Leaf Blade", "Throwing Dagger", "War Cleaver"],
+  "All Maces": ["Club", "Battle Mace", "Hammerpick", "Mace", "Maul", "Scepter", "Spiked Club", "War Hammer", "War Mace", "Whips", "Wizard Wands", "Smith Hammers(as weapons)"],
+  "All Special Range Weapons": ["Harpoon", "Throwing Gloves", "Wizard Staff"],
+  "All Oriental Weapons": ["Bokuto", "Daisho", "Kama", "Lajatang", "No Dachi", "Nunchaku", "Sai", "Tekagi", "Tessen", "Tetsubo", "Wakizashi", "Yumi"],
+  "All Polearm Weapons": ["Bardiche", "Halbred", "Scythe"],
+  "All Forks and Spear Weapons": ["Bladed Staff", "Double Bladed Staff", "Pike", "Trident", "Pitchfork", "Short spear", "Spear", "War fork"],
+  "All Staves": ["Black Staff", "Quarter Staff", "Gnarled Staff", "Shepherd's Crook", "Druid Staff"],
+  "All Swords": ["Bone Harvester", "Broadsword", "Claymore", "Crescent Blade", "Cutlass", "Elven Machete", "Elven Spellblade", "Katana", "Kryss", "Lance", "Longsword", "Radiant Scimitar", "Royal Sword", "Rune blade", "Scimitar", "Short sword", "sword", "barbarian sword"]
+};
+// Standalone items (always in pool, both modes)
+const ITEM_LOOSE = [
+  "Cloth Clothing", "Jewelry and Trinkets", "Quivers", "Pugilist Gloves", "Elixirs", "Mixtures", "Buff Potions", "Damage Potions",
+];
+function allPackedNames(){ return Object.keys(ITEM_PACKS); }
+function allUnpackedItems(){
+  const out=[];
+  for(const items of Object.values(ITEM_PACKS)) out.push(...items);
+  return out;
+}
+function defaultItemPool(mode){
+  if(mode==="unpacked") return [...allUnpackedItems(), ...ITEM_LOOSE];
+  return [...allPackedNames(), ...ITEM_LOOSE];
+}
+// ============================================================
+//  QUESTS — easy to expand
+//  type: "kill" | "craft"
+//  title may include {x} for the rolled count
+//  requires: at least ONE of these skills must be in state.picked
+//  minLevel: player level must be >= this (omit or 1 = no level gate)
+//  reward.kind: "xp" | "xp_pct"  (xp_pct = player-entered combat XP * value)
+// ============================================================
+const QUEST_DEFS = [
+  {
+    id: "kill_dragons",
+    type: "kill",
+    title: "Kill {x} Dragons creatures",
+    description: "Dragons include drakes, wyverns, dragons, greater dragons, gem dragons, wyrms, and ancient wyrms as a creature type.",
+    countMin: 25,
+    countMax: 50,
+    minLevel: 50,
+    reward: { kind: "xp_pct", value: 0.15 },
+    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
+  },
+  {
+    id: "kill_Undead",
+    type: "kill",
+    title: "Kill {x} Undead creatures",
+    description: "Any Creature effected by the Undead Slayer.",
+    countMin: 10,
+    countMax: 50,
+    minLevel: 1,
+    reward: { kind: "xp_pct", value: 0.15 },
+    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
+  },
+  {
+    id: "kill_Rodents",
+    type: "kill",
+    title: "Kill {x} Rodents creatures",
+    description: "Any Rat based creature ranging from Sewer Rats to Ratmen.",
+    countMin: 5,
+    countMax: 15,
+    minLevel: 9,
+    reward: { kind: "xp_pct", value: 0.15 },
+    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
+  },
+  {
+    id: "craft_robes",
+    type: "craft",
+    title: "Craft {x} Robes",
+    description: "Sew robes until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Tailoring"]
+  },
+  {
+    id: "craft_deadlypoison",
+    type: "craft",
+    title: "Craft {x} deadly poison",
+    description: "Brew deadly poison until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Alchemy"]
+  },
+  {
+    id: "craft_citrine",
+    type: "craft",
+    title: "Craft {x} citrine items",
+    description: "Craft any citrine item until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Tinkering"]
+  },
+  {
+    id: "craft_elvenshield",
+    type: "craft",
+    title: "Craft {x} elven shields items",
+    description: "Smith elven shields until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Blacksmith"]
+  },
+  {
+    id: "craft_woodlandshortbow",
+    type: "craft",
+    title: "Craft {x} woodland shortbow items",
+    description: "Craft woodland shortbow until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Bowcraft"]
+  },
+  {
+    id: "craft_Scrolls",
+    type: "craft",
+    title: "Craft {x} Scrolls items",
+    description: "Due to bullshit of inscription of not being able to go into spellbooks, craft any scroll you want.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Inscribe"]
+  },
+  {
+    id: "craft_woodenshield",
+    type: "craft",
+    title: "Craft {x} wooden shield",
+    description: "Craft Wooden shield until the count is met.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Carpentry"]
+  },
+  {
+    id: "craft_cooking",
+    type: "craft",
+    title: "Craft {x} make food",
+    description: "Your in the kitchen make anything with cooking skill.",
+    countMin: 20,
+    countMax: 20,
+    reward: { kind: "xp", value: 300 },
+    requires: ["Cooking"]
+  }
+  // Add more quests below, same shape:
+  // ,{ id:"...", type:"kill"|"craft", title:"...", description:"...", countMin:1, countMax:10, reward:{kind:"xp",value:100}, requires:["SkillName"] }
+];
+const QUEST_CHAIN_BONUS_AT = 10; // streak needed
+const QUEST_CHAIN_BONUS_MULT = 1.5; // +50% at streak
+
+const WEIGHTED_CHANCE = 0.15;
+const MAX_MILESTONE_SLOTS = 5;
+const STARTER_COUNT = 4;
+const XP_BASE = 500;
+const PRESTIGE_GROWTH = 0.25;
+const LEVEL_GROWTH = 0.08;
+// ============================================================
+const STORAGE_KEY = "draftPickerState_v6"; // legacy single-save migration
+const SAVES_KEY = "draftPickerSaves_v7";
+let activeSaveName = "Default";
+let fileHandle = null;
+const FREE_PICK = "Free Pick";
+
+let state = {
+  remaining:[], picked:[], bans:{},
+  milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+  generateCharges:0, chargesSpent:0, levelsSinceReward:0,
+  starterUses:0,
+  mods:{
+    ignorePrereqs:false,
+    customInterval:false,
+    levelsPerCharge:4,
+    chargesPerAward:1,
+    maxLevel:100,
+    starterLimitOn:false,
+    starterMax:null,
+    itemDraft:false,
+    itemMode:"packed"
+  },
+  itemRemaining:[],
+  itemPicked:[],
+  quest:null, // active quest instance
+  questStreak:0,
+  questCooldownUntil:0
+};
+
+let currentMode=null, freePickCardEl=null, starterMode=false, starterCards=[];
+let generateCards=[], generateExclude=new Set(), generateKind="skill";
+let pendingSelect=null; // {item, cardEl, kind}
+
+const $=id=>document.getElementById(id);
+const on=(id,ev,fn)=>{const el=$(id); if(el) el[ev]=fn;};
+const cardsEl=$("cards"), toastEl=$("toast"), modal=$("pickModal");
+
+function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+function showToast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.classList.remove("show"),2400);}
+function hasPrereq(i){return PREREQS[i]&&PREREQS[i].length>0;}
+function prereqsMet(i){
+  if(state.mods.ignorePrereqs) return true;
+  if(!hasPrereq(i)) return true;
+  return PREREQS[i].some(r=>state.picked.includes(r));
+}
+function isBanned(item,ctx){
+  const b=state.bans[item]; if(!b) return false;
+  if(b==="full") return true;
+  if(ctx==="starter"&&b==="starter") return true;
+  if(ctx==="generate"&&b==="generate") return true;
+  if(ctx==="any") return true;
+  return false;
+}
+function levelsPerCharge(){
+  if(state.mods.customInterval) return Math.max(1, parseInt(state.mods.levelsPerCharge,10)||4);
+  return 4;
+}
+function xpRequired(){
+  const p=1+PRESTIGE_GROWTH*state.prestige;
+  const l=1+LEVEL_GROWTH*(state.level-1);
+  return Math.ceil(XP_BASE*p*l);
+}
+function chargesPerAward(){ return Math.max(1, parseInt(state.mods.chargesPerAward,10)||1); }
+function maxLevel(){ return Math.max(2, parseInt(state.mods.maxLevel,10)||100); }
+function expectedChargesFromLevel(){
+  const awards = Math.floor(state.level / levelsPerCharge());
+  return awards * chargesPerAward();
+}
+
+function buildPool(ctx, applyW, exclude){
+  const pool=[];
+  for(const item of state.remaining){
+    if(ctx==="starter"&&item===FREE_PICK) continue;
+    if(isBanned(item,ctx)) continue;
+    if(item!==FREE_PICK&&!prereqsMet(item)) continue;
+    if(exclude&&exclude.has(item)) continue;
+    const w=hasPrereq(item)&&!state.mods.ignorePrereqs;
+    if(w&&applyW){ if(Math.random()<WEIGHTED_CHANCE) pool.push({name:item,weighted:true}); }
+    else pool.push({name:item,weighted:w&&item!==FREE_PICK});
+  }
+  return pool;
+}
+function buildItemPool(exclude){
+  return state.itemRemaining.filter(i=>!(exclude&&exclude.has(i))).map(n=>({name:n,weighted:false}));
+}
+
+function updateStatus(){
+  const real=state.remaining.filter(x=>x!==FREE_PICK).length;
+  let extra="";
+  if(state.mods.starterLimitOn&&state.mods.starterMax) extra=` · Starter rerolls: <strong>${state.starterUses}/${state.mods.starterMax}</strong>`;
+  $("status").innerHTML=`Save: <strong>${activeSaveName}</strong> · Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong> · Generate: <strong>${state.generateCharges}</strong>${extra}`;
+  const maxL=maxLevel();
+  const ld=$("levelDisplay");
+  if(ld){
+    ld.textContent=state.level;
+    // update max level label next to it without destroying the node
+    const parent=ld.parentElement;
+    if(parent && parent.childNodes.length){
+      // keep structure: Level <strong>X</strong> / max
+      parent.innerHTML=`Level <strong id="levelDisplay">${state.level}</strong> / ${maxL}`;
+    }
+  }
+
+  const need=xpRequired();
+  $("xpText").textContent=`${state.xp} / ${need} XP`;
+  $("xpBarFill").style.width=Math.min(100,(state.xp/need)*100)+"%";
+  $("totalXpDisplay").textContent=state.totalXp.toLocaleString();
+  if(state.level>=maxLevel()) $("prestigeBtn").classList.add("show"); else $("prestigeBtn").classList.remove("show");
+  $("generate").disabled=state.generateCharges<1;
+  $("generateItem").disabled=state.generateCharges<1;
+  if(state.mods.itemDraft) $("generateItem").classList.add("show"); else $("generateItem").classList.remove("show");
+  // Starter limit applies to Reroll Unlocked only, not starting a draft
+  $("slotCountLabel").textContent=`(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+}
+function renderPicked(){
+  const el=$("pickedList");
+  const all=[...state.picked.map(i=>({n:i,t:"skill"})),...state.itemPicked.map(i=>({n:i,t:"item"}))];
+  if(!all.length){el.innerHTML=`<span class="no-picked">Nothing picked yet</span>`;return;}
+  const canRefund=!!(state.mods&&state.mods.draftReroll);
+  el.innerHTML=all.map(x=>{
+    const tip=x.t==="item"
+      ? "Item you may use — drafted item unlock"
+      : "Skill you may use — drafted skill unlock";
+    const btn=canRefund
+      ? ` <button data-refund-type="${x.t}" data-refund-name="${x.n}" title="Spend 1 reroll: return to pool and +1 Generate charge" style="background:transparent;border:none;color:#fdcb6e;cursor:pointer;padding:0 0 0 .25rem;">↩</button>`
+      : "";
+    return `<span class="picked-item" title="${tip}">${x.n}${x.t==="item"?" (item)":""}${btn}</span>`;
+  }).join("");
+  el.querySelectorAll("[data-refund-name]").forEach(b=>{
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      refundDrafted(b.dataset.refundType, b.dataset.refundName);
+    };
+  });
+}
+function refundDrafted(kind, name){
+  if(!(state.mods&&state.mods.draftReroll)) return showToast("Enable “Reroll drafted” in Modifiers");
+  if(state.rerolls<1) return showToast("No reroll tokens");
+  if(kind==="item"){
+    if(!state.itemPicked.includes(name)) return;
+    state.itemPicked=state.itemPicked.filter(x=>x!==name);
+    if(!state.itemRemaining.includes(name)) state.itemRemaining.push(name);
+  } else {
+    if(!state.picked.includes(name)) return;
+    state.picked=state.picked.filter(x=>x!==name);
+    if(!state.remaining.includes(name)) state.remaining.push(name);
+  }
+  state.rerolls-=1;
+  state.generateCharges+=1;
+  // chargesSpent tracks spends; refunding a generation does not undo past spends math
+  save(); updateStatus(); renderPicked();
+  showToast(`Returned ${name} · +1 Generate · −1 reroll`);
+}
+function cloneState(){ return JSON.parse(JSON.stringify(state)); }
+function normalizeState(data){
+  if(!data||!Array.isArray(data.remaining)||!Array.isArray(data.picked)) return null;
+  const s = Object.assign({
+    remaining:[], picked:[], bans:{},
+    milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+    unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+    generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60},
+    itemRemaining:[], itemPicked:[]
+  }, data);
+  while(s.milestones.length<MAX_MILESTONE_SLOTS) s.milestones.push(null);
+  s.milestones=s.milestones.slice(0,MAX_MILESTONE_SLOTS);
+  if(!s.mods) s.mods={};
+  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60}, s.mods);
+  if(!Array.isArray(s.itemRemaining)) s.itemRemaining=defaultItemPool(s.mods.itemMode||"packed");
+  if(!Array.isArray(s.itemPicked)) s.itemPicked=[];
+  if(typeof s.chargesSpent!=="number") s.chargesSpent=0;
+  if(typeof s.starterUses!=="number") s.starterUses=0;
+  if(typeof s.mods.questsEnabled!=="boolean") s.mods.questsEnabled=false;
+  if(typeof s.mods.questCooldownMinutes!=="number") s.mods.questCooldownMinutes=60;
+  if(typeof s.questStreak!=="number") s.questStreak=0;
+  if(typeof s.questCooldownUntil!=="number") s.questCooldownUntil=0;
+  if(s.quest===undefined) s.quest=null;
+  return s;
+}
+function readSavesStore(){
+  try{
+    const raw=localStorage.getItem(SAVES_KEY);
+    if(raw){
+      const store=JSON.parse(raw);
+      if(store&&store.slots&&typeof store.slots==="object") return store;
+    }
+  }catch{}
+  return { active:"Default", slots:{} };
+}
+function writeSavesStore(store){
+  localStorage.setItem(SAVES_KEY, JSON.stringify(store));
+}
+function save(){
+  const store=readSavesStore();
+  store.active=activeSaveName;
+  store.slots[activeSaveName]=cloneState();
+  writeSavesStore(store);
+  // keep legacy key in sync for old backups
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function load(){
+  try{
+    const store=readSavesStore();
+    // migrate legacy single save if slots empty
+    if(!Object.keys(store.slots).length){
+      const legacy=localStorage.getItem(STORAGE_KEY);
+      if(legacy){
+        const data=JSON.parse(legacy);
+        const n=normalizeState(data);
+        if(n){
+          store.slots["Default"]=n;
+          store.active="Default";
+          writeSavesStore(store);
+        }
+      }
+    }
+    if(!Object.keys(store.slots).length) return false;
+    activeSaveName=store.active && store.slots[store.active] ? store.active : Object.keys(store.slots)[0];
+    const n=normalizeState(store.slots[activeSaveName]);
+    if(!n) return false;
+    state=n;
+    return true;
+  }catch{return false;}
+}
+function switchSave(name){
+  if(!name) return;
+  const store=readSavesStore();
+  if(!store.slots[name]) return showToast("Save not found");
+  // persist current first
+  store.slots[activeSaveName]=cloneState();
+  activeSaveName=name;
+  store.active=name;
+  writeSavesStore(store);
+  state=normalizeState(store.slots[name]);
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  renderAll();
+  showToast("Loaded: "+name);
+}
+function createSave(name){
+  name=(name||"").trim();
+  if(!name) return showToast("Enter a name");
+  const store=readSavesStore();
+  if(store.slots[name]) return showToast("Name already exists");
+  store.slots[activeSaveName]=cloneState();
+  // new empty-ish run from defaults but keep same master lists structure via fullReset-like
+  const fresh=normalizeState({
+    remaining:[...MASTER_LIST], picked:[], bans:{},
+    milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+    unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+    generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
+    mods:JSON.parse(JSON.stringify(state.mods)),
+    itemRemaining:defaultItemPool((state.mods&&state.mods.itemMode)||"packed"),
+    itemPicked:[]
+  });
+  store.slots[name]=fresh;
+  activeSaveName=name;
+  store.active=name;
+  state=fresh;
+  writeSavesStore(store);
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  renderAll();
+  showToast("Created: "+name);
+}
+function deleteSave(name){
+  const store=readSavesStore();
+  if(Object.keys(store.slots).length<=1) return showToast("Keep at least one save");
+  if(!store.slots[name]) return;
+  if(!confirm("Delete save \""+name+"\"?")) return;
+  delete store.slots[name];
+  if(activeSaveName===name){
+    activeSaveName=Object.keys(store.slots)[0];
+    store.active=activeSaveName;
+    state=normalizeState(store.slots[activeSaveName]);
+  }
+  writeSavesStore(store);
+  renderAll();
+  renderSavesList();
+  showToast("Deleted: "+name);
+}
+function renameSave(oldName, newName){
+  newName=(newName||"").trim();
+  if(!newName) return showToast("Enter a name");
+  const store=readSavesStore();
+  if(!store.slots[oldName]) return;
+  if(store.slots[newName]) return showToast("Name already exists");
+  store.slots[newName]=store.slots[oldName];
+  delete store.slots[oldName];
+  if(activeSaveName===oldName) activeSaveName=newName;
+  store.active=activeSaveName;
+  writeSavesStore(store);
+  renderSavesList();
+  updateStatus();
+  showToast("Renamed to "+newName);
+}
+
+function hideLanding(){
+  const el=$("landing");
+  if(el) el.classList.add("hidden");
+}
+function showLanding(){
+  const el=$("landing");
+  if(el) el.classList.remove("hidden");
+  renderLandingList();
+}
+function renderLandingList(){
+  const el=$("landingList");
+  if(!el) return;
+  const store=readSavesStore();
+  const names=Object.keys(store.slots||{}).sort((a,b)=>a.localeCompare(b));
+  if(!names.length){
+    el.innerHTML=`<p style="color:#666;font-size:.9rem;text-align:center;padding:.5rem 0">No characters yet — create one below.</p>`;
+    return;
+  }
+  el.innerHTML=names.map(n=>{
+    const st=store.slots[n]||{};
+    const meta=`Level ${st.level||1} · Picked ${(st.picked||[]).length} · Prestige ${st.prestige||0}`;
+    return `<div class="landing-slot" data-play="${n}">
+      <div><strong>${n}</strong><div class="meta">${meta}</div></div>
+      <button type="button" data-play-btn="${n}">Play</button>
+    </div>`;
+  }).join("");
+  el.querySelectorAll("[data-play]").forEach(row=>{
+    row.onclick=(e)=>{
+      if(e.target && e.target.getAttribute && e.target.getAttribute("data-play-btn")) return;
+      enterSave(row.getAttribute("data-play"));
+    };
+  });
+  el.querySelectorAll("[data-play-btn]").forEach(b=>{
+    b.onclick=(e)=>{ e.stopPropagation(); enterSave(b.getAttribute("data-play-btn")); };
+  });
+}
+function enterSave(name){
+  if(!name) return;
+  switchSave(name);
+  hideLanding();
+  showToast("Playing: "+name);
+}
+function landingCreate(){
+  const name=(($("landingNewName")&&$("landingNewName").value)||"").trim();
+  if(!name) return showToast("Enter a character name");
+  createSave(name);
+  if($("landingNewName")) $("landingNewName").value="";
+  hideLanding();
+}
+
+function renderSavesList(){
+  const store=readSavesStore();
+  const el=$("savesList");
+  if(!el) return;
+  if($("activeSaveLabel")) $("activeSaveLabel").textContent=activeSaveName;
+  const names=Object.keys(store.slots).sort((a,b)=>a.localeCompare(b));
+  el.innerHTML=names.map(n=>{
+    const st=store.slots[n]||{};
+    const meta=`Lv ${st.level||1} · Picked ${(st.picked||[]).length} · Prestige ${st.prestige||0}`;
+    const active=n===activeSaveName?' style="border-color:#00cec9"':'';
+    return `<div style="background:#252530;border:1px solid #333;border-radius:8px;padding:.65rem .75rem;margin-bottom:.4rem;${active?';border-color:#00cec9;':''}">
+      <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <div><strong>${n}</strong>${n===activeSaveName?' <span style="color:#00cec9;font-size:.75rem;">(active)</span>':''}<div style="font-size:.75rem;color:#888;margin-top:.15rem;">${meta}</div></div>
+        <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+          <button data-load="${n}" style="background:#6c5ce7;color:#fff;padding:.35rem .6rem;font-size:.8rem;">Load</button>
+          <button data-rename="${n}" style="background:#2d2d38;color:#ccc;border:1px solid #3d3d4a;padding:.35rem .6rem;font-size:.8rem;">Rename</button>
+          <button data-del="${n}" style="background:#5c2a2a;color:#f88;padding:.35rem .6rem;font-size:.8rem;">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("")||'<span class="no-picked">No saves</span>';
+  el.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{switchSave(b.dataset.load);renderSavesList();});
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>deleteSave(b.dataset.del));
+  el.querySelectorAll("[data-rename]").forEach(b=>b.onclick=()=>{
+    const nn=prompt("New name for \""+b.dataset.rename+"\":", b.dataset.rename);
+    if(nn!=null) renameSave(b.dataset.rename, nn);
+  });
+}
+
+function syncMilestoneSlots(){state.unlockedSlots=Math.min(state.prestige,MAX_MILESTONE_SLOTS);}
+function renderMilestones(){
+  syncMilestoneSlots();
+  const el=$("milestoneSlots"); el.innerHTML="";
+  for(let i=0;i<MAX_MILESTONE_SLOTS;i++){
+    const slot=document.createElement("div"); slot.className="slot";
+    if(i>=state.unlockedSlots){slot.innerHTML=`<span class="empty-label">Locked</span>`;slot.style.opacity=".4";slot.style.cursor="default";}
+    else if(state.milestones[i]){
+      slot.classList.add("filled");
+      slot.innerHTML=`${state.milestones[i]} <button class="slot-remove" data-idx="${i}">✓</button>`;
+      slot.querySelector("button").onclick=e=>{e.stopPropagation();claimMilestone(i);};
+    } else {
+      slot.innerHTML=`<span class="empty-label">+ Bank card</span>`;
+      slot.onclick=()=>openMilestonePicker(i);
+    }
+    el.appendChild(slot);
+  }
+  updateStatus();
+}
+function openMilestonePicker(idx){
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any"));
+  if(!choices.length) return showToast("No cards to bank");
+  $("modalTitle").textContent="Bank a card";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item;
+    b.onclick=()=>{state.milestones[idx]=item;state.remaining=state.remaining.filter(x=>x!==item);closeModal();save();renderMilestones();updateStatus();showToast("Banked: "+item);};
+    $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
+function claimMilestone(i){
+  const n=state.milestones[i]; if(!n) return;
+  if(!state.picked.includes(n)) state.picked.push(n);
+  state.milestones[i]=null; save(); renderMilestones(); renderPicked(); updateStatus(); showToast("Claimed: "+n);
+}
+
+function addXP(){
+  const amount=Math.max(0,parseInt($("xpInput").value,10)||0);
+  if(amount<=0) return showToast("Enter XP");
+  $("xpInput").value="";
+  state.xp+=amount; state.totalXp+=amount;
+  let leveled=0;
+  const interval=levelsPerCharge();
+  const per=chargesPerAward();
+  const maxL=maxLevel();
+  while(state.level<maxL&&state.xp>=xpRequired()){
+    state.xp-=xpRequired(); state.level+=1; leveled+=1;
+    state.levelsSinceReward+=1;
+    if(state.levelsSinceReward>=interval){
+      state.levelsSinceReward=0;
+      state.generateCharges+=per;
+      showToast(`Level ${state.level}! +${per} Generate charge(s)`);
+    }
+  }
+  if(state.level>=maxL){state.xp=0;$("prestigeBtn").classList.add("show");}
+  save(); updateStatus(); renderMilestones();
+  if(leveled&&state.levelsSinceReward!==0) showToast(`+${amount} XP · +${leveled} level(s)`);
+  else if(!leveled) showToast(`+${amount} XP`);
+}
+
+function applyModifiersRefresh(){
+  const prevMode=state.mods.itemMode||"packed";
+  state.mods.ignorePrereqs=$("modIgnorePrereq").checked;
+  state.mods.customInterval=$("modCustomInterval").checked;
+  state.mods.levelsPerCharge=Math.max(1,parseInt($("modInterval").value,10)||4);
+  state.mods.chargesPerAward=Math.max(1,parseInt($("modChargesPer").value,10)||1);
+  state.mods.maxLevel=Math.max(2,parseInt($("modMaxLevel").value,10)||100);
+  state.mods.starterLimitOn=$("modStarterLimit").checked;
+  const sm=$("modStarterMax").value;
+  state.mods.starterMax=sm===""||sm===null?null:Math.max(1,parseInt(sm,10)||1);
+  state.mods.itemDraft=$("modItemDraft").checked;
+  state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
+  state.mods.draftReroll=$("modDraftReroll")?$("modDraftReroll").checked:false;
+  state.mods.questsEnabled=$("modQuests")?$("modQuests").checked:false;
+  state.mods.questCooldownMinutes=Math.max(1,parseInt($("modQuestCd")&&$("modQuestCd").value,10)||60);
+
+  // Rebuild item pool when mode changes (preserve already-picked)
+  if(state.mods.itemMode!==prevMode || true){
+    rebuildItemPoolFromMode();
+  }
+
+  if(state.level>state.mods.maxLevel) state.level=state.mods.maxLevel;
+
+  const expected=expectedChargesFromLevel();
+  const newCharges=Math.max(0, expected - state.chargesSpent);
+  const old=state.generateCharges;
+  if(newCharges>old){
+    state.generateCharges=newCharges;
+    showToast(`Rules applied · Generate ${old} → ${newCharges}`);
+  } else {
+    showToast("Rules applied · item pool refreshed");
+  }
+  state.levelsSinceReward=state.level % levelsPerCharge();
+  save(); updateStatus(); renderQuestLog();
+}
+function rebuildItemPoolFromMode(){
+  const mode=state.mods.itemMode||"packed";
+  const full=defaultItemPool(mode);
+  // Keep items not yet picked that still belong in this mode
+  const pickedSet=new Set(state.itemPicked);
+  // If switching packed→unpacked, expand any picked packs into their items as picked
+  if(mode==="unpacked"){
+    const expanded=[];
+    state.itemPicked.forEach(name=>{
+      if(ITEM_PACKS[name]) expanded.push(...ITEM_PACKS[name]);
+      else expanded.push(name);
+    });
+    state.itemPicked=[...new Set(expanded)];
+  }
+  // Remaining = full pool minus picked
+  const picked=new Set(state.itemPicked);
+  state.itemRemaining=full.filter(x=>!picked.has(x));
+}
+
+function doPrestige(){
+  if(state.level<maxLevel()) return;
+  if(!confirm("Prestige?\nLevel → 1 · +5 rerolls · soft-reset drafts · keeps milestones/bans")) return;
+  state.picked.forEach(c=>{if(!state.remaining.includes(c)&&c!==FREE_PICK) state.remaining.push(c);});
+  if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked=[]; state.level=1; state.xp=0; state.prestige+=1; state.rerolls+=5;
+  state.levelsSinceReward=0; state.generateCharges=0; state.chargesSpent=0; state.starterUses=0;
+  syncMilestoneSlots(); exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked(); renderMilestones();
+  cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls</p>`;
+  showToast("Prestige #"+state.prestige);
+}
+function deathReset(){
+  if(!confirm("Death Reset?\nReturn skill & item drafts to pool · restore Generate charges · reset starter reroll uses")) return;
+  state.picked.forEach(c=>{if(!state.remaining.includes(c)) state.remaining.push(c);});
+  if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
+  state.picked=[];
+  // Return items
+  state.itemPicked.forEach(c=>{if(!state.itemRemaining.includes(c)) state.itemRemaining.push(c);});
+  state.itemPicked=[];
+  state.generateCharges=expectedChargesFromLevel();
+  state.chargesSpent=0;
+  state.levelsSinceReward=state.level%levelsPerCharge();
+  state.starterUses=0;
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked();
+  cardsEl.innerHTML=`<p class="empty">Death reset · charges & starter rerolls restored</p>`;
+  showToast("Death reset");
+}
+function fullReset(){
+  if(!confirm("FULL RESET the current save \""+activeSaveName+"\"?\nOther named saves are kept.")) return;
+  state={
+    remaining:[...MASTER_LIST],picked:[],bans:{},
+    milestones:Array(MAX_MILESTONE_SLOTS).fill(null),unlockedSlots:0,
+    level:1,xp:0,totalXp:0,prestige:0,rerolls:0,generateCharges:0,chargesSpent:0,
+    levelsSinceReward:0,starterUses:0,
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60},
+    itemRemaining:defaultItemPool("packed"),itemPicked:[],
+    quest:null, questStreak:0, questCooldownUntil:0
+  };
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  save();
+  syncModUI(); updateStatus(); renderPicked(); renderBans(); renderBanSelect(); renderMilestones(); renderQuestLog();
+  cardsEl.innerHTML=`<p class="empty">Full reset · ${activeSaveName}</p>`;
+  showToast("Reset save: "+activeSaveName);
+}
+
+function hideConfirm(){const b=$("confirmBar"); if(b) b.style.display="none";}
+function showConfirm(){const b=$("confirmBar"); if(b){ b.style.display="block"; b.style.visibility="visible"; }}
+
+function openPickModal(mode){
+  currentMode=mode;
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&prereqsMet(x));
+  if(!choices.length) return showToast("None available");
+  $("modalTitle").textContent=mode==="free"?"Free Pick":"Manual Pick";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item+(hasPrereq(item)?" ★":"");
+    b.onclick=()=>finalizePick(item); $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
+function finalizePick(item){
+  state.remaining=state.remaining.filter(x=>x!==item);
+  if(!state.picked.includes(item)) state.picked.push(item);
+  if(currentMode==="free"&&freePickCardEl){
+    document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+    freePickCardEl.classList.add("selected");
+    freePickCardEl.querySelector(".hint").textContent="Locked in";
+    freePickCardEl.querySelector(".name").textContent=item;
+  }
+  closeModal(); save(); updateStatus(); renderPicked();
+  showToast(currentMode==="free"?"Free Pick → "+item:"Added: "+item);
+}
+function closeModal(){modal.classList.remove("open");currentMode=null;freePickCardEl=null;}
+
+function spendCharge(){ state.generateCharges-=1; state.chargesSpent+=1; }
+
+function generate(kind){
+  if(state.generateCharges<1) return showToast("Need a Generate charge");
+  exitStarterMode(); pendingSelect=null; hideConfirm();
+  generateKind=kind||"skill";
+  spendCharge();
+  generateExclude=new Set();
+  let pool;
+  if(generateKind==="item"){
+    pool=buildItemPool(generateExclude);
+  } else {
+    pool=buildPool("generate",true,generateExclude);
+  }
+  if(!pool.length){
+    state.generateCharges+=1; state.chargesSpent=Math.max(0,state.chargesSpent-1);
+    cardsEl.innerHTML=`<p class="empty">No available ${generateKind}s.</p>`;
+    save(); updateStatus(); return;
+  }
+  generateCards=shuffle(pool).slice(0,Math.min(3,pool.length));
+  generateCards.forEach(c=>generateExclude.add(c.name));
+  save(); updateStatus();
+  renderGenerateCards();
+}
+function renderGenerateCards(){
+  cardsEl.innerHTML="";
+  generateCards.forEach((entry,index)=>{
+    const item=entry.name;
+    let cls="card"+(item===FREE_PICK?" freepick":"")+(entry.weighted?" weighted":"");
+    if(pendingSelect&&pendingSelect.item===item) cls+=" pending";
+    const card=document.createElement("div"); card.className=cls;
+    card.innerHTML=`${entry.weighted?'<div class="badge">Weighted</div>':''}<div class="number">#${index+1}</div><div class="name">${item}</div><div class="hint">${item===FREE_PICK?"Click to choose freely":"Click to select · Confirm to lock"}</div><button class="reroll-one" data-idx="${index}" ${state.rerolls<1?"disabled":""}>Reroll (1 token)</button>`;
+    card.addEventListener("click",e=>{
+      if(e.target.classList.contains("reroll-one")) return;
+      if(item===FREE_PICK){ freePickCardEl=card; openPickModal("free"); return; }
+      // pending select
+      document.querySelectorAll(".card").forEach(c=>c.classList.remove("pending"));
+      card.classList.add("pending");
+      pendingSelect={item, cardEl:card, kind:generateKind, index};
+      showConfirm();
+    });
+    const rb=card.querySelector(".reroll-one");
+    if(rb) rb.onclick=e=>{e.stopPropagation();rerollOneGenerate(index);};
+    cardsEl.appendChild(card);
+  });
+}
+function rerollOneGenerate(idx){
+  if(state.rerolls<1) return showToast("No reroll tokens");
+  const old=generateCards[idx].name;
+  const exclude=new Set(generateExclude);
+  generateCards.forEach(c=>exclude.add(c.name));
+  const pool=generateKind==="item"?buildItemPool(exclude):buildPool("generate",true,exclude);
+  if(!pool.length) return showToast("Nothing else to reroll into");
+  const next=shuffle(pool)[0];
+  generateCards[idx]=next; generateExclude.add(next.name);
+  state.rerolls-=1;
+  if(pendingSelect&&pendingSelect.index===idx){pendingSelect=null;hideConfirm();}
+  save(); updateStatus(); renderGenerateCards();
+  showToast(`Rerolled ${old} → ${next.name}`);
+}
+function confirmSelection(){
+  if(!pendingSelect) return showToast("Select a card first");
+  const {item, cardEl, kind}=pendingSelect;
+  document.querySelectorAll(".card").forEach(c=>{c.classList.remove("pending","selected");c.style.pointerEvents="none";});
+  cardEl.classList.add("selected");
+  const h=cardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+  const rb=cardEl.querySelector(".reroll-one"); if(rb) rb.remove();
+  if(kind==="item"){
+    state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+    if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
+  } else {
+    state.remaining=state.remaining.filter(x=>x!==item);
+    if(!state.picked.includes(item)) state.picked.push(item);
+  }
+  generateCards=[]; pendingSelect=null; hideConfirm();
+  save(); updateStatus(); renderPicked();
+  showToast("Locked: "+item);
+}
+
+function exitStarterMode(){starterMode=false;starterCards=[];$("starterBar").classList.remove("active");}
+function startStarter(){
+  starterMode=true; generateCards=[]; pendingSelect=null; hideConfirm();
+  $("starterBar").classList.add("active"); starterCards=[];
+  save(); updateStatus();
+  drawStarter(true);
+}
+function drawStarter(full){
+  const pool=buildPool("starter",true,null);
+  const locked=starterCards.filter(c=>c.locked).map(c=>c.name);
+  const avail=pool.filter(p=>!locked.includes(p.name));
+  if(full){
+    starterCards=shuffle(avail).slice(0,Math.min(STARTER_COUNT,avail.length)).map(p=>({name:p.name,locked:false,weighted:p.weighted}));
+  } else {
+    const n=starterCards.filter(c=>!c.locked).length;
+    const draws=shuffle(avail).slice(0,n); let i=0;
+    starterCards=starterCards.map(c=>{
+      if(c.locked) return c;
+      if(i<draws.length){const d=draws[i++];return {name:d.name,locked:false,weighted:d.weighted};}
+      return c;
+    });
+  }
+  renderStarter();
+}
+function renderStarter(){
+  cardsEl.innerHTML="";
+  if(!starterCards.length){cardsEl.innerHTML=`<p class="empty">No cards for starter</p>`;return;}
+  starterCards.forEach((entry,index)=>{
+    const card=document.createElement("div");
+    card.className="card"+(entry.locked?" locked":"")+(entry.weighted?" weighted":"");
+    card.innerHTML=`${entry.weighted?'<div class="badge">Weighted</div>':''}<div class="number">#${index+1}</div><div class="name">${entry.name}</div><div class="hint">${entry.locked?"Locked — click unlock":"Click to lock"}</div>`;
+    card.onclick=()=>{entry.locked=!entry.locked;renderStarter();};
+    cardsEl.appendChild(card);
+  });
+}
+function rerollUnlocked(){
+  if(!starterMode) return;
+  if(!starterCards.some(c=>!c.locked)) return showToast("Unlock at least one to reroll");
+  if(state.mods.starterLimitOn&&state.mods.starterMax!=null){
+    if(state.starterUses>=state.mods.starterMax) return showToast("Starter reroll limit reached");
+    state.starterUses+=1;
+  }
+  if(state.rerolls>0){state.rerolls-=1;showToast("Rerolled (−1 token)");}
+  else showToast("Rerolled");
+  save(); updateStatus();
+  drawStarter(false);
+}
+function finalizeStarter(){
+  if(!starterMode||!starterCards.length) return;
+  const names=starterCards.map(c=>c.name);
+  names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
+  exitStarterMode();
+  cardsEl.innerHTML=`<p class="empty">Finalized! ${names.length} card(s)</p>`;
+  save(); updateStatus(); renderPicked(); showToast("Finalized: "+names.join(", "));
+}
+
+function renderBanSelect(){
+  const opts=MASTER_LIST.filter(c=>c!==FREE_PICK&&!state.bans[c]);
+  $("banCardSelect").innerHTML=opts.length?opts.map(c=>`<option value="${c}">${c}</option>`).join(""):`<option value="">(none)</option>`;
+}
+function renderBans(){
+  const e=Object.entries(state.bans);
+  if(!e.length){$("banList").innerHTML=`<span class="no-picked">No bans</span>`;return;}
+  $("banList").innerHTML=e.map(([n,t])=>`<span class="ban-item">${n} <small style="opacity:.7">(${t})</small><button data-unban="${n}">✕</button></span>`).join("");
+  $("banList").querySelectorAll("[data-unban]").forEach(b=>{
+    b.onclick=()=>{delete state.bans[b.dataset.unban];save();renderBans();renderBanSelect();showToast("Unbanned");};
+  });
+}
+function syncModUI(){
+  $("modIgnorePrereq").checked=!!state.mods.ignorePrereqs;
+  $("modCustomInterval").checked=!!state.mods.customInterval;
+  $("modInterval").value=state.mods.levelsPerCharge||4;
+  if($("modChargesPer")) $("modChargesPer").value=state.mods.chargesPerAward||1;
+  if($("modMaxLevel")) $("modMaxLevel").value=state.mods.maxLevel||100;
+  $("modStarterLimit").checked=!!state.mods.starterLimitOn;
+  $("modStarterMax").value=state.mods.starterMax==null?"":state.mods.starterMax;
+  $("modItemDraft").checked=!!state.mods.itemDraft;
+  if($("modItemMode")) $("modItemMode").value=state.mods.itemMode||"packed";
+  if($("modDraftReroll")) $("modDraftReroll").checked=!!state.mods.draftReroll;
+  if($("modQuests")) $("modQuests").checked=!!state.mods.questsEnabled;
+  if($("modQuestCd")) $("modQuestCd").value=state.mods.questCooldownMinutes||60;
+}
+function syncEditUI(){
+  $("editCharges").value=state.generateCharges;
+  $("editChargesSpent").value=state.chargesSpent;
+  $("editLevel").value=state.level;
+  $("editXp").value=state.xp;
+  $("editTotalXp").value=state.totalXp;
+  $("editRerolls").value=state.rerolls;
+  $("editPrestige").value=state.prestige;
+  $("editStarterUses").value=state.starterUses;
+}
+function applyEditValues(){
+  state.generateCharges=Math.max(0,parseInt($("editCharges").value,10)||0);
+  state.chargesSpent=Math.max(0,parseInt($("editChargesSpent").value,10)||0);
+  state.level=Math.max(1,Math.min(maxLevel(), parseInt($("editLevel").value,10)||1));
+  state.xp=Math.max(0,parseInt($("editXp").value,10)||0);
+  state.totalXp=Math.max(0,parseInt($("editTotalXp").value,10)||0);
+  state.rerolls=Math.max(0,parseInt($("editRerolls").value,10)||0);
+  state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
+  state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
+  save(); updateStatus(); renderMilestones();
+  showToast("Values updated");
+}
+function doCustomPick(){
+  const lines=$("customInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return showToast("Type options");
+  const c=lines[Math.floor(Math.random()*lines.length)];
+  $("customResult").textContent="→ "+c; $("customInput").value=""; showToast("Custom: "+c);
+}
+async function exportSave(){
+  // Only the active slot
+  const payload={
+    saveName: activeSaveName,
+    exportedAt: new Date().toISOString(),
+    state: cloneState()
+  };
+  const json=JSON.stringify(payload,null,2);
+  const fname=(activeSaveName||"draft-save").replace(/[\\/:*?"<>|]/g,"_")+".json";
+  try{
+    if(window.showSaveFilePicker){
+      const handle=await window.showSaveFilePicker({
+        suggestedName: fname,
+        types:[{description:"JSON Save", accept:{"application/json":[".json"]}}]
+      });
+      fileHandle=handle;
+      const writable=await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      showToast("Exported (overwrite-capable) · "+activeSaveName);
+      return;
+    }
+  }catch(e){
+    if(e&&e.name==="AbortError") return;
+  }
+  // Fallback: fixed filename (browser may still append (1) if file exists in Downloads)
+  const blob=new Blob([json],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast("Exported active save · "+activeSaveName+" (check Downloads)");
+}
+function importSave(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      let d=JSON.parse(e.target.result);
+      // support: {state:{...}}, {remaining:[...]}, or full slot dump
+      if(d&&d.state&&typeof d.state==="object") d=d.state;
+      if(d&&d.slots&&d.active&&d.slots[d.active]) d=d.slots[d.active];
+      const n=normalizeState(d);
+      if(!n) throw new Error("missing remaining/picked");
+      // repair pools
+      if(!n.remaining.length && n.picked.length < MASTER_LIST.length){
+        const have=new Set(n.picked);
+        n.remaining=MASTER_LIST.filter(x=>!have.has(x));
+      }
+      state=n;
+      exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+      save();
+      syncModUI(); renderAll();
+      showToast("Imported into: "+activeSaveName);
+    }catch(err){
+      console.error(err);
+      showToast("Invalid save");
+    }
+  };
+  r.readAsText(file);
+}
+
+function playerSkills(){ return new Set(state.picked||[]); }
+function questEligible(def){
+  if(!def) return false;
+  const minLv = Math.max(1, parseInt(def.minLevel,10)||1);
+  if((state.level||1) < minLv) return false;
+  if(!def.requires||!def.requires.length) return true;
+  const skills=playerSkills();
+  return def.requires.some(r=>skills.has(r));
+}
+function questCooldownMs(){
+  return Math.max(1, parseInt(state.mods.questCooldownMinutes,10)||60) * 60 * 1000;
+}
+function questOnCooldown(){
+  return Date.now() < (state.questCooldownUntil||0);
+}
+function formatRemain(ms){
+  const s=Math.max(0,Math.ceil(ms/1000));
+  const m=Math.floor(s/60), r=s%60;
+  return m+":"+String(r).padStart(2,"0");
+}
+function updateQuestButton(){
+  const btn=$("questBtn");
+  const rail=$("questRail");
+  const enabled=!!(state.mods&&state.mods.questsEnabled);
+  if(rail) rail.style.display = enabled ? "" : "none";
+  if(!btn) return;
+  if(!enabled){
+    btn.classList.remove("show","cooldown");
+    btn.style.display="none";
+    btn.disabled=true;
+    return;
+  }
+  btn.style.display="inline-flex";
+  btn.classList.add("show");
+  if(questOnCooldown()){
+    btn.disabled=true;
+    btn.classList.add("cooldown");
+    const left=(state.questCooldownUntil||0)-Date.now();
+    btn.textContent="Quest CD "+formatRemain(left);
+  } else {
+    btn.disabled=false;
+    btn.classList.remove("cooldown");
+    btn.textContent="Generate Quest";
+  }
+}
+let _questTimer=null;
+function ensureQuestTimer(){
+  if(_questTimer) return;
+  _questTimer=setInterval(()=>{
+    updateQuestButton();
+    if(!questOnCooldown() && _questTimer){
+      // keep ticking while enabled so button recovers
+    }
+  }, 1000);
+}
+function rollQuestCount(def){
+  const a=Math.max(1, parseInt(def.countMin,10)||1);
+  const b=Math.max(a, parseInt(def.countMax,10)||a);
+  return a + Math.floor(Math.random()*(b-a+1));
+}
+function generateQuest(){
+  if(!(state.mods&&state.mods.questsEnabled)) return showToast("Enable Quests in Modifiers");
+  if(questOnCooldown()) return showToast("Quest on cooldown");
+  if(state.quest) return showToast("Finish or skip your current quest first");
+  const pool=QUEST_DEFS.filter(questEligible);
+  if(!pool.length) return showToast("No quests available for your drafted skills");
+  const def=pool[Math.floor(Math.random()*pool.length)];
+  const count=rollQuestCount(def);
+  state.quest={
+    defId: def.id,
+    type: def.type,
+    title: (def.title||"").replace(/\{x\}/gi, String(count)),
+    description: def.description||"",
+    count,
+    reward: def.reward?{...def.reward}: {kind:"xp", value:0},
+    requires: def.requires?[...def.requires]:[]
+  };
+  save(); renderQuestLog(); updateQuestButton();
+  showToast("Quest assigned: "+state.quest.title);
+}
+function chainMultiplier(){
+  // Bonus applies on the Nth completion in a row (e.g. 10th), then streak resets
+  const next = (state.questStreak||0) + 1;
+  return next >= QUEST_CHAIN_BONUS_AT ? QUEST_CHAIN_BONUS_MULT : 1;
+}
+function completeQuest(){
+  if(!state.quest) return;
+  const q=state.quest;
+  const mult=chainMultiplier();
+  let msg="";
+  if(q.reward.kind==="xp"){
+    const xp=Math.ceil((q.reward.value||0)*mult);
+    // feed into XP system
+    state.xp+=xp; state.totalXp+=xp;
+    let leveled=0;
+    const interval=levelsPerCharge();
+    const per=chargesPerAward();
+    const maxL=maxLevel();
+    while(state.level<maxL&&state.xp>=xpRequired()){
+      state.xp-=xpRequired(); state.level+=1; leveled+=1;
+      state.levelsSinceReward+=1;
+      if(state.levelsSinceReward>=interval){
+        state.levelsSinceReward=0;
+        state.generateCharges+=per;
+      }
+    }
+    if(state.level>=maxL) state.xp=0;
+    msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
+  } else if(q.reward.kind==="xp_pct"){
+    // Typed XP (from kills) is granted in full, plus percentage bonus (chain multiplies the bonus only)
+    const baseXp=Math.max(0, parseInt(($("questXpEarned")&&$("questXpEarned").value)||"0",10)||0);
+    const bonus=Math.ceil(baseXp*(q.reward.value||0)*mult);
+    const xp=baseXp+bonus;
+    state.xp+=xp; state.totalXp+=xp;
+    let leveled=0;
+    const interval=levelsPerCharge();
+    const per=chargesPerAward();
+    const maxL=maxLevel();
+    while(state.level<maxL&&state.xp>=xpRequired()){
+      state.xp-=xpRequired(); state.level+=1; leveled+=1;
+      state.levelsSinceReward+=1;
+      if(state.levelsSinceReward>=interval){
+        state.levelsSinceReward=0;
+        state.generateCharges+=per;
+      }
+    }
+    if(state.level>=maxL) state.xp=0;
+    msg=`+${xp} XP (${baseXp} + ${bonus} bonus)`+(mult>1?` (bonus ${mult}× chain)`:"");
+  } else {
+    msg="Quest complete";
+  }
+  state.questStreak=(state.questStreak||0)+1;
+  let streakMsg=state.questStreak;
+  if(state.questStreak >= QUEST_CHAIN_BONUS_AT){
+    streakMsg = state.questStreak + " (bonus!) → reset";
+    state.questStreak = 0;
+  }
+  state.quest=null;
+  state.questCooldownUntil=Date.now()+questCooldownMs();
+  save(); renderQuestLog(); updateStatus(); renderMilestones();
+  showToast(msg+" · chain "+streakMsg);
+}
+function skipQuest(){
+  if(!state.quest) return;
+  if(!confirm("Skip quest? This resets your quest chain streak.")) return;
+  state.quest=null;
+  state.questStreak=0;
+  state.questCooldownUntil=Date.now()+questCooldownMs();
+  save(); renderQuestLog(); updateQuestButton();
+  showToast("Quest skipped · chain reset");
+}
+function resetQuestCooldown(){
+  state.questCooldownUntil=0;
+  save(); updateQuestButton();
+  showToast("Quest cooldown cleared");
+}
+function renderQuestLog(){
+  const body=$("questLogBody");
+  if(!body) return;
+  if(!(state.mods&&state.mods.questsEnabled)){
+    body.innerHTML=`<p class="ql-empty">Quests disabled. Turn them on under Modifiers.</p>`;
+    return;
+  }
+  const streak=state.questStreak||0;
+  const nextBonus = QUEST_CHAIN_BONUS_AT - streak;
+  const chainNote = nextBonus <= 0
+    ? `Chain ready — next quest gets ×${QUEST_CHAIN_BONUS_MULT}, then resets`
+    : `Chain <strong>${streak}</strong> / ${QUEST_CHAIN_BONUS_AT} — bonus on the ${QUEST_CHAIN_BONUS_AT}th, then resets`;
+  if(!state.quest){
+    body.innerHTML=`<p class="ql-empty">No active quest. Press <strong>Generate Quest</strong> when ready.</p>
+      <div class="ql-chain">${chainNote}</div>`;
+    return;
+  }
+  const q=state.quest;
+  const type=q.type==="craft"?"craft":"kill";
+  const typeLabel=type==="craft"?"Crafting":"Monster Slaying";
+  let rewardLine="";
+  if(q.reward.kind==="xp"){
+    const base=q.reward.value||0;
+    const mult=chainMultiplier();
+    rewardLine=`Reward: <strong>${Math.ceil(base*mult)} XP</strong>`+(mult>1?` (base ${base} × chain)`:"");
+  } else if(q.reward.kind==="xp_pct"){
+    const pct=Math.round((q.reward.value||0)*100);
+    rewardLine=`Reward: <strong>XP you enter</strong> + <strong>${pct}%</strong> bonus`+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
+  }
+  const req=(q.requires||[]).join(", ")||"None";
+  const xpField=q.reward.kind==="xp_pct"
+    ? `<input class="ql-xp" id="questXpEarned" type="number" min="0" placeholder="XP earned from kills (full amount + bonus applied)">`
+    : "";
+  body.innerHTML=`
+    <span class="ql-type ${type}">${typeLabel}</span>
+    <div class="ql-title">${q.title}</div>
+    <div class="ql-desc">${q.description||""}</div>
+    <div class="ql-meta">${rewardLine}<br>Requires (any one): <strong>${req}</strong></div>
+    ${xpField}
+    <div class="ql-actions">
+      <button class="ql-complete" id="questCompleteBtn">Finish</button>
+      <button class="ql-skip" id="questSkipBtn">Skip Quest</button>
+    </div>
+    <div class="ql-chain">${chainNote}</div>`;
+  const c=$("questCompleteBtn"); if(c) c.onclick=completeQuest;
+  const s=$("questSkipBtn"); if(s) s.onclick=skipQuest;
+}
+
+function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();syncModUI();renderQuestLog();ensureQuestTimer();}
+
+function bind(id, fn){ const el=$(id); if(!el){ console.warn("missing #"+id); return; } el.onclick=fn; }
+bind("starterBtn", startStarter);
+bind("generate", ()=>generate("skill"));
+bind("generateItem", ()=>generate("item"));
+bind("questBtn", generateQuest);
+bind("confirmLockBtn", confirmSelection);
+bind("manualPick", ()=>openPickModal("manual"));
+bind("banBtn", ()=>{renderBanSelect();renderBans();$("banModal").classList.add("open");});
+bind("banClose", ()=>$("banModal").classList.remove("open"));
+const banModal=$("banModal"); if(banModal) banModal.onclick=e=>{if(e.target===banModal)banModal.classList.remove("open");};
+bind("modBtn", ()=>{syncModUI();$("modModal").classList.add("open");});
+bind("modClose", ()=>$("modModal").classList.remove("open"));
+const modModal=$("modModal"); if(modModal) modModal.onclick=e=>{if(e.target===modModal)modModal.classList.remove("open");};
+bind("modRefresh", applyModifiersRefresh);
+bind("savesBtn", ()=>{renderSavesList();$("savesModal").classList.add("open");});
+bind("landingCreateBtn", landingCreate);
+const landingName=$("landingNewName");
+if(landingName) landingName.addEventListener("keydown", e=>{ if(e.key==="Enter") landingCreate(); });
+bind("githubBtn", ()=>{ const m=$("githubModal"); if(m) m.classList.add("open"); });
+bind("githubClose", ()=>{ const m=$("githubModal"); if(m) m.classList.remove("open"); });
+const githubModal=$("githubModal");
+if(githubModal) githubModal.onclick=e=>{ if(e.target===githubModal) githubModal.classList.remove("open"); };
+bind("githubCopyBtn", async ()=>{
+  const url="https://github.com/Asgria/memento---avatar-coin-tracker---python";
+  try{
+    await navigator.clipboard.writeText(url);
+    showToast("Link copied");
+  }catch{
+    showToast("Copy failed — select the URL text manually");
+  }
+});
+
+bind("savesClose", ()=>$("savesModal").classList.remove("open"));
+const savesModal=$("savesModal"); if(savesModal) savesModal.onclick=e=>{if(e.target===savesModal)savesModal.classList.remove("open");};
+bind("createSaveBtn", ()=>{createSave($("newSaveName").value); if($("newSaveName"))$("newSaveName").value=""; renderSavesList();});
+bind("editBtn", ()=>{syncEditUI();$("editModal").classList.add("open");});
+bind("editClose", ()=>$("editModal").classList.remove("open"));
+const editModal=$("editModal"); if(editModal) editModal.onclick=e=>{if(e.target===editModal)editModal.classList.remove("open");};
+bind("editApply", ()=>{applyEditValues();$("editModal").classList.remove("open");});
+bind("customBtn", ()=>{if($("customResult"))$("customResult").textContent=""; $("customModal").classList.add("open");});
+bind("customClose", ()=>$("customModal").classList.remove("open"));
+const customModal=$("customModal"); if(customModal) customModal.onclick=e=>{if(e.target===customModal)customModal.classList.remove("open");};
+bind("export", ()=>{ exportSave(); });
+const importEl=$("import"); if(importEl) importEl.onchange=e=>{if(e.target.files[0]){importSave(e.target.files[0]);e.target.value="";}};
+bind("deathReset", deathReset);
+bind("reset", fullReset);
+bind("resetQuestCd", resetQuestCooldown);
+bind("prestigeBtn", doPrestige);
+bind("addXpBtn", addXP);
+bind("rerollBtn", rerollUnlocked);
+bind("finalizeBtn", finalizeStarter);
+bind("cancelPick", closeModal);
+if(modal) modal.onclick=e=>{if(e.target===modal)closeModal();};
+bind("customPickBtn", doCustomPick);
+bind("banAddBtn", ()=>{
+  const n=$("banCardSelect").value,t=$("banTypeSelect").value; if(!n) return;
+  state.bans[n]=t; save(); renderBans(); renderBanSelect(); showToast("Banned "+n);
+});
+
+if(!load()){
+  state.remaining=[...MASTER_LIST];
+  state.milestones=Array(MAX_MILESTONE_SLOTS).fill(null);
+  state.itemRemaining=defaultItemPool(state.mods.itemMode||"packed");
+  activeSaveName = activeSaveName || "Default";
+  save();
+}
+// Repair empty skill pool (corrupt / partial save)
+if(!Array.isArray(state.remaining)) state.remaining=[];
+if(!Array.isArray(state.picked)) state.picked=[];
+if(state.remaining.length===0 && state.picked.length < MASTER_LIST.length){
+  const have=new Set(state.picked);
+  state.remaining=MASTER_LIST.filter(x=>!have.has(x));
+}
+if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)&&!state.picked.includes(FREE_PICK))
+  state.remaining.push(FREE_PICK);
+if(!Array.isArray(state.itemRemaining) || (state.itemRemaining.length===0 && (!state.itemPicked||state.itemPicked.length===0))){
+  state.itemRemaining=defaultItemPool((state.mods&&state.mods.itemMode)||"packed");
+}
+try { renderAll(); }
+catch(e){ console.error(e); showToast("UI error — try Full Reset in Tools"); }
+renderLandingList();
+showLanding();
+
+</script>
+</body>
+</html>
