@@ -207,9 +207,10 @@
     <button id="startItemsBtn" title="One-time starter item roll (prefers weapons for your combat skills)" style="display:none;background:#6c3483;color:#fff">Starter Items</button>
     <button id="buyItemChargeBtn" title="Spend 500 coins for +1 Item Generate charge (not skill charges)" style="display:none;background:#b7950b;color:#1a1a2e">Buy Item Charge (500)</button>
     <button id="questBtn" title="Roll a quest for extra XP/rewards (no Generate charge). Cooldown applies after claim/skip.">Generate Quest</button>
+    <button id="buyProfBtn" title="Spend 10,000 coins for a permanent extra profession skill" style="display:none;background:#b7950b;color:#1a1a2e">Buy Profession (10k)</button>
+    <button id="skillValuesBtn" title="Record skill totals (0–125.0) for craft quest gates" style="background:#6c5ce7;color:#fff">Skill Values</button>
     <button id="modBtn" title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
     <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
-    <button id="customBtn" title="One-off random pick from a temporary list (not saved to draft)">Custom Random</button>
     <button id="githubBtn" title="Python XP / avatar coin tracker for in-game use">XP Tracker Script</button>
     <button id="export" title="Export only the currently active save slot as JSON">Export Save</button>
     <label class="file-btn" title="Import JSON into the currently active save slot only">Import Save<input type="file" id="import" accept=".json,application/json"></label>
@@ -267,10 +268,17 @@
       <button id="manualPick" style="background:#e17055;color:#fff;" title="Manually add any available skill to your draft">Manual Skill</button>
       <button id="manualItemBtn" style="background:#8e44ad;color:#fff;display:none" title="Manually add an item from the current item pool">Manual Item</button>
       <button id="banBtn" style="background:#636e72;color:#fff;" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
+      <button id="banStarterBtn" style="background:#4a5568;color:#fff;" title="Quick-ban skills so they never appear in Starter Draft">Ban from Starter</button>
       <button id="editBtn" style="background:#636e72;color:#fff;" title="Manually set charges, level, XP, rerolls, prestige">Edit Values</button>
+      <button id="customBtn" style="background:#a29bfe;color:#1a1a2e;" title="One-off random pick from a temporary list">Custom Random</button>
       <button id="resetQuestCd" style="background:#8e6b2a;color:#f5e6c8;" title="Clear the quest generate cooldown timer">Reset Quest Cooldown</button>
       <button id="reset" style="background:#5c2a2a;color:#f88;border:1px solid #833;" title="Wipe the CURRENT save slot only back to defaults">Full Reset (this save)</button>
     </div>
+  </div>
+
+  <div class="panel" id="historyPanel">
+    <h2>Action History <span style="color:#666;font-weight:400;font-size:.85rem">(last 20)</span></h2>
+    <div id="historyList" style="font-size:.8rem;color:#999;max-height:200px;overflow-y:auto;line-height:1.55"></div>
   </div>
 </div><!-- /main-col -->
 
@@ -310,13 +318,28 @@
       <input type="number" id="editPrestige" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Starter rerolls used</strong>
       <input type="number" id="editStarterUses" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Golden card chance</strong><div class="sub">0–1 (default 0.15). Pack goldens &amp; free-pick goldens.</div>
+      <input type="number" id="editGoldenChance" min="0" max="1" step="0.01" value="0.15" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Free Pick chance</strong><div class="sub">0–1 (default 0.15). Chance Free Pick appears on skill/item rolls.</div>
+      <input type="number" id="editFreePickChance" min="0" max="1" step="0.01" value="0.15" style="margin-top:.35rem;width:100%"></div></div>
     <button id="editApply" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-top:.5rem;">Apply Changes</button>
   </div><footer><button id="editClose">Close</button></footer></div></div>
 
   <div class="modal-overlay" id="pickModal"><div class="modal"><header id="modalTitle">Choose</header><div class="body"><div class="list" id="pickList"></div></div><footer><button id="cancelPick">Cancel</button></footer></div></div>
 
+  
+  <div class="modal-overlay" id="skillValuesModal"><div class="modal"><header>Skill Values (0 – 125.0)</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Record real skill totals for craft quest gates. Decimals matter (e.g. 55.4). Cleared on Death Reset.</p>
+    <div id="skillValuesList" style="display:flex;flex-direction:column;gap:.35rem;max-height:220px;overflow-y:auto;margin-bottom:.5rem"></div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+      <select id="skillValueSelect" style="background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px;flex:1;min-width:120px"></select>
+      <input type="number" id="skillValueInput" min="0" max="125" step="0.1" placeholder="55.4" style="width:90px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px">
+      <button type="button" id="skillValueSave" style="background:#6c5ce7;color:#fff">Save Skill</button>
+    </div>
+  </div><footer><button id="skillValuesClose">Close</button></footer></div></div>
+
   <div class="modal-overlay" id="banModal"><div class="modal"><header>Ban Cards</header><div class="body">
-    <p style="font-size:.82rem;color:#888;margin-bottom:.7rem">Full = never · Starter only · Generate only. ✕ to unban.</p>
+    <p style="font-size:.82rem;color:#888;margin-bottom:.7rem">Full = never appears · Starter only = hidden from Starter Draft · Generate only = hidden from Generate 3. ✕ to unban. Use “Ban from Starter” in Tools for a quick starter ban.</p>
     <div class="ban-controls">
       <select id="banCardSelect"></select>
       <select id="banTypeSelect"><option value="full">Full ban</option><option value="starter">Starter only</option><option value="generate">Generate only</option></select>
@@ -336,8 +359,9 @@
     <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited</div>
       <input type="number" id="modStarterMax" min="1" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
     <div class="mod-row"><input type="checkbox" id="modItemDraft"><div><strong>Enable Item Draft</strong><div class="sub">Shares Generate charges — choose skill or item roll</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modSkillItems"><div><strong>Skill-unlocked items</strong><div class="sub">When on, drafting a skill (e.g. Alchemy) adds its items to the item pool. Off = ignore SKILL_ITEMS entirely.</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modGoldItems"><div><strong>Spend gold for item rolls</strong><div class="sub">XP deposits coins 1:1. Buy Generate charges for items at 500 coins. Quests deposit 25% of entered XP as coins.</div></div></div>
-    <div class="mod-row"><input type="checkbox" id="modProfessions"><div><strong>Profession limit</strong><div class="sub">Pick 1 gathering + 1 crafting. Other craft skills leave the pool (Cooking &amp; Forensics always stay).</div>
+    <div class="mod-row"><input type="checkbox" id="modProfessions"><div><strong>Profession limit</strong><div class="sub">Primary gather + craft are auto-granted &amp; locked. Buy extra profession slots for 10,000 coins (permanent, not refunded on Death Reset). Other craft/gather leave the pool (Cooking &amp; Forensics stay).</div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem">
         <select id="modGatherSkill" style="background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.35rem;border-radius:8px">
           <option value="Mining">Mining</option>
@@ -351,6 +375,7 @@
           <option value="Inscribe">Inscribe</option>
           <option value="Tailoring">Tailoring</option>
           <option value="Tinkering">Tinkering</option>
+          <option value="Cooking">Cooking</option>
         </select>
       </div>
     </div></div>
@@ -387,6 +412,7 @@
 //  EDITABLE CONSTANTS
 // ============================================================
 const MASTER_LIST = [
+  "Free Pick",
 "Alchemy","Anatomy","Druidism","Mercantile","ArmsLore","Parry","Begging","Blacksmith","Bowcraft","Peacemaking",
 "Camping","Carpentry","Cartography","Cooking","Searching","Discordance","Psychology","Healing","Seafaring","Forensics",
 "Herding","Hiding","Provocation","Inscribe","Lockpicking","Magery","MagicResist","Tactics","Snooping","Musicianship",
@@ -419,18 +445,16 @@ const ITEM_PACKS = {
   "All Wooden Armors": ["Wooden Legs", "wooden gauntlets", "wooden gorget", "wooden arms", "wooden tunic", "wooden helm"],
   "All Axes": ["Axe", "Battle Axe", "Double Axe", "Executioner's Axe", "Hatchet", "Large Battle Axe", "Ornate Axe", "Two Handed Axe", "War axe"],
   "All Bows": ["Bow", "Composite Bow", "Crossbow", "Elven Composite Longbow", "Heavy Crossbow", "Magical Shortbow", "Repeating Crossbow"],
-  "All Knives": ["Assassin Dagger", "Butcher Knife", "Cleaver", "Dagger", "Large Knife", "Leaf Blade", "Throwing Dagger", "War Cleaver"],
-  "All Maces": ["Club", "Battle Mace", "Hammerpick", "Mace", "Maul", "Scepter", "Spiked Club", "War Hammer", "War Mace", "Whips", "Wizard Wands", "Smith Hammers(as weapons)"],
-  "All Special Range Weapons": ["Harpoon", "Throwing Gloves", "Wizard Staff"],
+  "All Fencing": ["Assassin Dagger", "Dagger", "Kryss", "War Dagger", "War Cleaver", "Pike", "Pitchfork", "Lance", "Double Bladed Staff", "Trident", "Spear", "War fork"],
+  "All Maces": ["Club", "Battle Mace", "Hammerpick", "Mace", "Maul", "Scepter", "Spiked Club", "War Hammer", "War Mace", "Whips", "Wizard Wands"],
   "All Oriental Weapons": ["Bokuto", "Daisho", "Kama", "Lajatang", "No Dachi", "Nunchaku", "Sai", "Tekagi", "Tessen", "Tetsubo", "Wakizashi", "Yumi"],
-  "All Polearm Weapons": ["Bardiche", "Halbred", "Scythe"],
-  "All Forks and Spear Weapons": ["Bladed Staff", "Double Bladed Staff", "Pike", "Trident", "Pitchfork", "Short spear", "Spear", "War fork"],
+  "All Fists Weapons": ["Pugilist Gloves"],
   "All Staves": ["Black Staff", "Quarter Staff", "Gnarled Staff", "Shepherd's Crook", "Druid Staff"],
-  "All Swords": ["Bone Harvester", "Broadsword", "Claymore", "Crescent Blade", "Cutlass", "Elven Machete", "Elven Spellblade", "Katana", "Kryss", "Lance", "Longsword", "Radiant Scimitar", "Royal Sword", "Rune blade", "Scimitar", "Short sword", "sword", "barbarian sword"]
+  "All Swords": ["Bardiche", "Bladed Staff", "Halbred", "Scythe", "assassin sword", "barbarian sword", "broadsword", "claymore", "Crescent blade", "Cutlass", "falchion", "Katana", "large knife", "longsword", "machete", "royal sword", "short sword", "sickle", "scimitar", "war blades", "war dagger", "Cleaver", "Butcher's Knife"],
 };
 // Standalone items (always in pool, both modes)
 const ITEM_LOOSE = [
-  "Cloth Clothing", "Jewelry and Trinkets", "Quivers", "Pugilist Gloves", "Elixirs", "Mixtures", "Buff Potions", "Damage Potions",
+  "Magical Cloth Clothing", "Jewelry and Trinkets", "Quivers", "Elixirs", "Mixtures", "Buff Potions", "Damage Potions", "Harpoon", "Throwing Gloves", "Wizard Staff", "Sceptre", "fukiya", "stave",
 ];
 function allPackedNames(){ return Object.keys(ITEM_PACKS); }
 function allUnpackedItems(){
@@ -442,144 +466,151 @@ function defaultItemPool(mode){
   if(mode==="unpacked") return [...allUnpackedItems(), ...ITEM_LOOSE];
   return [...allPackedNames(), ...ITEM_LOOSE];
 }
-const CRAFT_SKILLS = ["Alchemy","Blacksmith","Bowcraft","Carpentry","Inscribe","Tailoring","Tinkering"];
+// ============================================================
+//  SKILL-UNLOCKED ITEMS — appear in item pool once skill is drafted
+//  Expand freely: skill name → list of item names
+// ============================================================
+const SKILL_ITEMS = {
+  "Alchemy": [
+    "Lesser Heal Potion",
+    "Lesser Cure Potion",
+    "Lesser Poison Potion",
+    "Lesser Explosion Potion",
+    "Refresh Potion",
+    "Total Refresh Potion",
+    "Agility Potion",
+    "Greater Agility Potion",
+    "Strength Potion",
+    "Greater Strength Potion",
+    "Night Sight Potion",
+    "Cure Potion",
+    "Greater Cure Potion",
+    "Heal Potion",
+    "Greater Heal Potion",
+    "Poison Potion",
+    "Greater Poison Potion",
+    "Deadly Poison Potion",
+    "Lethal Poison Potion",
+    "Explosion Potion",
+    "Greater Explosion Potion",
+    "Elixirs",
+    "conflagration potion",
+    "greater conflagration potion",
+    "confusion blast",
+    "greater confusion blast",
+    "frostbite potion",
+    "greater frostbite potion",
+    "invulnerability potion",
+    "lesser invisibility potion",
+    "invisibility potion",
+    "greater invisibility potion",
+    "lesser mana potion",
+    "mana potion",
+    "greater mana potion",
+    "lesser rejuvenation potion",
+    "rejuvenation potion",
+    "greater rejuvenation potion",
+    "superior potion",
+    "repair potion",
+    "durability potion",
+    "Mixtures"
+  ]
+};
+
+function allSkillItemNames(){
+  const out=[];
+  if(typeof SKILL_ITEMS==="undefined") return out;
+  Object.values(SKILL_ITEMS).forEach(arr=>(arr||[]).forEach(n=>out.push(n)));
+  return out;
+}
+function syncSkillItems(){
+  if(typeof SKILL_ITEMS==="undefined") return;
+  if(!Array.isArray(state.itemRemaining)) state.itemRemaining=[];
+  if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
+  const enabled=!!(state.mods&&state.mods.skillItems);
+  const owned=new Set(state.picked||[]);
+  Object.entries(SKILL_ITEMS).forEach(([skill, items])=>{
+    (items||[]).forEach(it=>{
+      if(enabled && owned.has(skill)){
+        if(!state.itemPicked.includes(it) && !state.itemRemaining.includes(it)){
+          state.itemRemaining.push(it);
+        }
+      } else {
+        // disabled or skill not owned: strip from remaining (keep if already picked)
+        state.itemRemaining=state.itemRemaining.filter(x=>x!==it);
+      }
+    });
+  });
+}
+
+const CRAFT_SKILLS = ["Alchemy","Blacksmith","Bowcraft","Carpentry","Inscribe","Tailoring","Tinkering","Cooking"];
 const GATHER_SKILLS = ["Mining","Lumberjacking"];
-const MISC_ALWAYS = ["Cooking","Forensics"]; // always allowed under profession mode
+const MISC_ALWAYS = ["Forensics"]; // always allowed under profession mode
 const ITEM_CHARGE_COST = 500;
 const QUEST_COIN_PCT = 0.25; // quests deposit this fraction of entered kill XP as coins
 const COMBAT_STARTER_ITEMS = {
-  "Swords": ["Longsword","Broadsword","Axe"],
-  "Fencing": ["Kryss","Dagger","Assassin Spike"],
-  "Marksmanship": ["Bow","Woodland Crossbow","Wizard Staff","Throwing Gloves"],
+  "Swords": ["Axe", "Battle Axe", "Double Axe", "Executioner's Axe", "Hatchet", "Large Battle Axe", "Ornate Axe", "Two Handed Axe", "War axe", "Bardiche", "Bladed Staff", "Halbred", "Scythe", "assassin sword", "barbarian sword", "broadsword", "claymore", "Crescent blade", "Cutlass", "falchion", "Katana", "large knife", "longsword", "machete", "royal sword", "short sword", "sickle", "scimitar", "war blades", "war dagger"],
+  "Fencing": ["Assassin Dagger", "Dagger", "Kryss", "War Dagger", "War Cleaver", "Pike", "Pitchfork", "Lance", "Double Bladed Staff", "Trident", "Spear", "War fork"],
+  "Marksmanship": ["Bow", "Composite Bow", "Crossbow", "Elven Composite Longbow", "Heavy Crossbow", "Magical Shortbow", "Repeating Crossbow", "Wizard Staff","Throwing Gloves"],
   "Bludgeoning": ["Club","Mace","Warhammer","Spiked Club"],
   "FistFighting": ["Pugilist Gloves"]
 };
 
 // ============================================================
 //  QUESTS — easy to expand
-//  type: "kill" | "craft"
-//  title may include {x} for the rolled count
-//  requires: at least ONE of these skills must be in state.picked
-//  minLevel: player level must be >= this (omit or 1 = no level gate)
-//  reward.kind: "xp" | "xp_pct"  (xp_pct = player-entered combat XP * value)
+//  MONSTER_POOL: kill targets (level gates). Combat skills are shared.
+//  CRAFT_QUESTS: still need requires + optional minSkill/maxSkill (0-125)
+//  NPC_QUESTS: tribute quests (minLevel, requiresPrestige, rewardXp editable)
 // ============================================================
-const QUEST_DEFS = [
+const COMBAT_SKILLS = ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"];
+
+const MONSTER_POOL = [
   {
-    id: "kill_dragons",
-    type: "kill",
-    title: "Kill {x} Dragons creatures",
-    description: "Dragons include drakes, wyverns, dragons, greater dragons, gem dragons, wyrms, and ancient wyrms as a creature type.",
-    countMin: 25,
-    countMax: 50,
-    minLevel: 50,
-    reward: { kind: "xp_pct", value: 0.15 },
-    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
+    id: "dragons",
+    name: "Dragons",
+    description: "Dragons include drakes, wyverns, dragons, greater dragons, gem dragons, wyrms, and ancient wyrms.",
+    countMin: 25, countMax: 50,
+    minLevel: 25, maxLevel: null,
+    rewardPct: 0.15
   },
   {
-    id: "kill_Undead",
-    type: "kill",
-    title: "Kill {x} Undead creatures",
-    description: "Any Creature effected by the Undead Slayer.",
-    countMin: 10,
-    countMax: 50,
-    minLevel: 1,
-    reward: { kind: "xp_pct", value: 0.15 },
-    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
+    id: "undead",
+    name: "Undead",
+    description: "Any creature affected by the Undead Slayer.",
+    countMin: 10, countMax: 50,
+    minLevel: 1, maxLevel: null,
+    rewardPct: 0.15
   },
   {
-    id: "kill_Rodents",
-    type: "kill",
-    title: "Kill {x} Rodents creatures",
-    description: "Any Rat based creature ranging from Sewer Rats to Ratmen.",
-    countMin: 5,
-    countMax: 15,
-    minLevel: 9,
-    reward: { kind: "xp_pct", value: 0.15 },
-    requires: ["Swords","Fencing","Magery","Elementalism","Necromancy","Marksmanship","FistFighting","Bludgeoning","Taming"]
-  },
-  {
-    id: "craft_robes",
-    type: "craft",
-    title: "Craft {x} Robes",
-    description: "Sew robes until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Tailoring"]
-  },
-  {
-    id: "craft_deadlypoison",
-    type: "craft",
-    title: "Craft {x} deadly poison",
-    description: "Brew deadly poison until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Alchemy"]
-  },
-  {
-    id: "craft_citrine",
-    type: "craft",
-    title: "Craft {x} citrine items",
-    description: "Craft any citrine item until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Tinkering"]
-  },
-  {
-    id: "craft_elvenshield",
-    type: "craft",
-    title: "Craft {x} elven shields items",
-    description: "Smith elven shields until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Blacksmith"]
-  },
-  {
-    id: "craft_woodlandshortbow",
-    type: "craft",
-    title: "Craft {x} woodland shortbow items",
-    description: "Craft woodland shortbow until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Bowcraft"]
-  },
-  {
-    id: "craft_Scrolls",
-    type: "craft",
-    title: "Craft {x} Scrolls items",
-    description: "Due to bullshit of inscription of not being able to go into spellbooks, craft any scroll you want.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Inscribe"]
-  },
-  {
-    id: "craft_woodenshield",
-    type: "craft",
-    title: "Craft {x} wooden shield",
-    description: "Craft Wooden shield until the count is met.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Carpentry"]
-  },
-  {
-    id: "craft_cooking",
-    type: "craft",
-    title: "Craft {x} make food",
-    description: "Your in the kitchen make anything with cooking skill.",
-    countMin: 20,
-    countMax: 20,
-    reward: { kind: "xp", value: 300 },
-    requires: ["Cooking"]
+    id: "rodents",
+    name: "Rodents",
+    description: "Any rat-based creature from sewer rats to ratmen.",
+    countMin: 5, countMax: 15,
+    minLevel: 3, maxLevel: 25,
+    rewardPct: 0.15
   }
-  // Add more quests below, same shape:
-  // ,{ id:"...", type:"kill"|"craft", title:"...", description:"...", countMin:1, countMax:10, reward:{kind:"xp",value:100}, requires:["SkillName"] }
 ];
+
+const CRAFT_QUESTS = [
+  { id: "craft_robes", title: "Craft {x} Robes", description: "Sew robes until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Tailoring"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_deadlypoison", title: "Craft {x} deadly poison", description: "Brew deadly poison until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Alchemy"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_citrine", title: "Craft {x} citrine items", description: "Craft any citrine item until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Tinkering"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_elvenshield", title: "Craft {x} elven shields", description: "Smith elven shields until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Blacksmith"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_woodlandshortbow", title: "Craft {x} woodland shortbows", description: "Craft woodland shortbows until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Bowcraft"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_Scrolls", title: "Craft {x} scrolls", description: "Inscribe scrolls until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Inscribe"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_woodenshield", title: "Craft {x} wooden shields", description: "Craft wooden shields until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Carpentry"], minSkill: 0, maxSkill: 125 },
+  { id: "craft_cooking", title: "Cook {x} meals", description: "Cook meals until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Cooking"], minSkill: 0, maxSkill: 125 }
+];
+
+const NPC_QUESTS = [
+  { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 1000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_merlin", name: "Merlin", description: "Complete this npc's tribute quest", rewardXp: 1000, minLevel: 1, requiresPrestige: false }
+];
+
+const GOLDEN_PACK_CHANCE = 0.15;
+const FREE_PICK_CHANCE = 0.15; // unpacked: chance a pack golden card appears in a roll
+const PROFESSION_SLOT_COST = 10000;
+
 const QUEST_CHAIN_BONUS_AT = 10; // streak needed
 const QUEST_CHAIN_BONUS_MULT = 1.5; // +50% at streak
 
@@ -624,7 +655,11 @@ let state = {
   coinsSpent:0,
   starterToken:true,
   starterItemToken:true,
-  itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null)
+  itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  skillValues:{},
+  extraProfessions:[],
+  professionCoinsSpent:0,
+  history:[]
 };
 
 let currentMode=null, freePickCardEl=null, starterMode=false, starterIsItems=false, starterCards=[];
@@ -637,6 +672,36 @@ const cardsEl=$("cards"), toastEl=$("toast"), modal=$("pickModal");
 
 function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 function showToast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.classList.remove("show"),2400);}
+
+function goldenChance(){
+  const v = state.mods && state.mods.goldenChance;
+  if(typeof v==="number" && !isNaN(v)) return Math.max(0, Math.min(1, v));
+  return typeof GOLDEN_PACK_CHANCE!=="undefined" ? GOLDEN_PACK_CHANCE : 0.15;
+}
+function freePickChance(){
+  const v = state.mods && state.mods.freePickChance;
+  if(typeof v==="number" && !isNaN(v)) return Math.max(0, Math.min(1, v));
+  return typeof FREE_PICK_CHANCE!=="undefined" ? FREE_PICK_CHANCE : 0.15;
+}
+function skillsTiedByPrereq(skill){
+  const out=new Set([skill]);
+  const pre=(typeof PREREQS!=="undefined" && PREREQS[skill]) ? PREREQS[skill] : [];
+  pre.forEach(p=>out.add(p));
+  if(typeof PREREQS!=="undefined"){
+    Object.keys(PREREQS).forEach(sk=>{
+      if((PREREQS[sk]||[]).some(r=>pre.includes(r) || r===skill)) out.add(sk);
+      if((PREREQS[sk]||[]).includes(skill)) out.add(sk);
+    });
+  }
+  return [...out].filter(s=>s && s!==FREE_PICK);
+}
+function packForItem(itemName){
+  if(typeof ITEM_PACKS==="undefined") return null;
+  for(const [pk, items] of Object.entries(ITEM_PACKS)){
+    if((items||[]).includes(itemName)) return pk;
+  }
+  return null;
+}
 function hasPrereq(i){return PREREQS[i]&&PREREQS[i].length>0;}
 function prereqsMet(i){
   if(state.mods.ignorePrereqs) return true;
@@ -674,17 +739,52 @@ function isBlockedByProfession(skill){
   if(typeof GATHER_SKILLS!=="undefined" && GATHER_SKILLS.includes(skill) && skill!==state.mods.gatherSkill) return true;
   return false;
 }
+
+function openBuyProfession(){
+  if(!(state.mods&&state.mods.professions)) return showToast("Enable Profession limit in Modifiers");
+  const cost=typeof PROFESSION_SLOT_COST!=="undefined"?PROFESSION_SLOT_COST:10000;
+  if((state.spendableCoins||0)<cost) return showToast("Need "+cost+" coins");
+  const owned=new Set([...(state.picked||[]), ...(state.extraProfessions||[])]);
+  // Same list as Modifiers: craft + gather only
+  const list=[...(typeof CRAFT_SKILLS!=="undefined"?CRAFT_SKILLS:[]), ...(typeof GATHER_SKILLS!=="undefined"?GATHER_SKILLS:[])]
+    .filter(s=>!owned.has(s));
+  if(!list.length) return showToast("No profession skills left to purchase");
+  currentMode="buyProf";
+  $("modalTitle").textContent="Buy Profession Slot ("+cost+" coins)";
+  $("pickList").innerHTML="";
+  list.forEach(sk=>{
+    const b=document.createElement("button"); b.textContent=sk;
+    b.onclick=()=>{
+      state.spendableCoins-=cost;
+      state.professionCoinsSpent=(state.professionCoinsSpent||0)+cost;
+      if(!state.extraProfessions) state.extraProfessions=[];
+      if(!state.extraProfessions.includes(sk)) state.extraProfessions.push(sk);
+      if(!state.picked.includes(sk)) state.picked.push(sk);
+      state.remaining=state.remaining.filter(x=>x!==sk);
+      closeModal(); save(); updateStatus(); renderPicked(); renderSkillValues();
+      pushHistory("Bought profession: "+sk+" (−"+cost+" coins)");
+      showToast("Profession unlocked: "+sk);
+    };
+    $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
 function applyProfessionFilter(){
   if(!(state.mods&&state.mods.professions)) return;
   const g=state.mods.gatherSkill, c=state.mods.craftSkill;
-  // Auto-grant selected professions every time
-  [g,c].forEach(sk=>{
+  const all=[g,c,...(state.extraProfessions||[])];
+  all.forEach(sk=>{
     if(!sk) return;
     if(!state.picked.includes(sk)) state.picked.push(sk);
     state.remaining=state.remaining.filter(x=>x!==sk);
   });
-  // Remove other craft/gather from pool (unrollable)
-  state.remaining = state.remaining.filter(s=>s===FREE_PICK||!isBlockedByProfession(s));
+  // Other craft/gather leave the pool (unrollable) unless purchased as extra
+  state.remaining = state.remaining.filter(s=>{
+    if(s===FREE_PICK) return true;
+    if((state.extraProfessions||[]).includes(s)) return false;
+    return !isBlockedByProfession(s);
+  });
+  if(typeof syncSkillItems==="function") syncSkillItems();
 }
 function buildPool(ctx, applyW, exclude){
   const pool=[];
@@ -701,7 +801,23 @@ function buildPool(ctx, applyW, exclude){
   return pool;
 }
 function buildItemPool(exclude){
-  return state.itemRemaining.filter(i=>!(exclude&&exclude.has(i))).map(n=>({name:n,weighted:false}));
+  const pool=state.itemRemaining.filter(i=>!(exclude&&exclude.has(i))).map(n=>({name:n,weighted:false,golden:false}));
+  // Unpacked: chance to inject a golden pack card that unlocks whole pack
+  if(state.mods&&state.mods.itemMode==="unpacked" && typeof ITEM_PACKS!=="undefined"){
+    const packs=Object.keys(ITEM_PACKS).filter(pk=>{
+      return (ITEM_PACKS[pk]||[]).some(it=>state.itemRemaining.includes(it) && !(exclude&&exclude.has(it)));
+    });
+    if(packs.length && Math.random()<goldenChance()){
+      const pk=packs[Math.floor(Math.random()*packs.length)];
+      pool.push({name:"✦ "+pk+" (All)", weighted:true, golden:true, packName:pk});
+    }
+  }
+  // Free Pick for items
+  if(Math.random()<freePickChance()){
+    const isGold=Math.random()<goldenChance();
+    pool.push({name:FREE_PICK, weighted:isGold, golden:isGold, freePick:true});
+  }
+  return pool;
 }
 
 function updateStatus(){
@@ -788,8 +904,17 @@ function updateStatus(){
 
   $("slotCountLabel").textContent=`(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
   const imp=$("itemMilestonePanel"); if(imp) imp.style.display=itemOn?"":"none";
+  const bp=$("buyProfBtn");
+  if(bp){
+    const show=!!(state.mods&&state.mods.professions);
+    bp.style.display=show?"inline-flex":"none";
+    const cost=typeof PROFESSION_SLOT_COST!=="undefined"?PROFESSION_SLOT_COST:10000;
+    bp.disabled=(state.spendableCoins||0)<cost;
+  }
   if(typeof updateQuestButton==="function") updateQuestButton();
   if(typeof renderItemMilestones==="function") renderItemMilestones();
+  if(typeof renderSkillValues==="function") renderSkillValues();
+  if(typeof renderHistory==="function") renderHistory();
 }
 function renderPicked(){
   const el=$("pickedList");
@@ -838,13 +963,13 @@ function normalizeState(data){
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
     unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
-    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"},
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
     itemRemaining:[], itemPicked:[]
   }, data);
   while(s.milestones.length<MAX_MILESTONE_SLOTS) s.milestones.push(null);
   s.milestones=s.milestones.slice(0,MAX_MILESTONE_SLOTS);
   if(!s.mods) s.mods={};
-  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"}, s.mods);
+  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15}, s.mods);
   if(!Array.isArray(s.itemRemaining)) s.itemRemaining=defaultItemPool(s.mods.itemMode||"packed");
   if(!Array.isArray(s.itemPicked)) s.itemPicked=[];
   if(typeof s.chargesSpent!=="number") s.chargesSpent=0;
@@ -864,13 +989,20 @@ function normalizeState(data){
   if(typeof s.starterToken!=="boolean") s.starterToken = s.starterDone===false ? true : !s.starterDone;
   if(typeof s.starterItemToken!=="boolean") s.starterItemToken=true;
   delete s.starterDone;
+  if(!s.skillValues||typeof s.skillValues!=="object") s.skillValues={};
+  if(!Array.isArray(s.extraProfessions)) s.extraProfessions=[];
+  if(typeof s.professionCoinsSpent!=="number") s.professionCoinsSpent=0;
+  if(!Array.isArray(s.history)) s.history=[];
   if(!Array.isArray(s.itemMilestones)) s.itemMilestones=Array(MAX_MILESTONE_SLOTS).fill(null);
   while(s.itemMilestones.length<MAX_MILESTONE_SLOTS) s.itemMilestones.push(null);
   s.itemMilestones=s.itemMilestones.slice(0,MAX_MILESTONE_SLOTS);
   if(typeof s.mods.goldItems!=="boolean") s.mods.goldItems=false;
+  if(typeof s.mods.skillItems!=="boolean") s.mods.skillItems=false;
   if(typeof s.mods.professions!=="boolean") s.mods.professions=false;
-  if(!s.mods.gatherSkill) s.mods.gatherSkill="Mining";
+  if(!s.mods.gatherSkill || s.mods.gatherSkill==="Fishing") s.mods.gatherSkill="Mining";
   if(!s.mods.craftSkill) s.mods.craftSkill="Blacksmith";
+  if(typeof s.mods.goldenChance!=="number") s.mods.goldenChance=0.15;
+  if(typeof s.mods.freePickChance!=="number") s.mods.freePickChance=0.15;
   return s;
 }
 function readSavesStore(){
@@ -1114,6 +1246,7 @@ function addXP(){
     state.totalCoins=(state.totalCoins||0)+amount;
     state.spendableCoins=(state.spendableCoins||0)+amount;
   }
+  pushHistory("XP added: +"+amount+(state.mods&&state.mods.goldItems?" (coins +"+amount+")":""));
   let leveled=0;
   const interval=levelsPerCharge();
   const per=chargesPerAward();
@@ -1144,6 +1277,7 @@ function applyModifiersRefresh(){
   const sm=$("modStarterMax").value;
   state.mods.starterMax=sm===""||sm===null?null:Math.max(1,parseInt(sm,10)||1);
   state.mods.itemDraft=$("modItemDraft").checked;
+  state.mods.skillItems=$("modSkillItems")?$("modSkillItems").checked:false;
   state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
   state.mods.draftReroll=$("modDraftReroll")?$("modDraftReroll").checked:false;
   state.mods.questsEnabled=$("modQuests")?$("modQuests").checked:false;
@@ -1194,15 +1328,39 @@ function rebuildItemPoolFromMode(){
 
 function doPrestige(){
   if(state.level<maxLevel()) return;
-  if(!confirm("Prestige?\nLevel → 1 · +5 rerolls · soft-reset drafts · keeps milestones/bans")) return;
-  state.picked.forEach(c=>{if(!state.remaining.includes(c)&&c!==FREE_PICK) state.remaining.push(c);});
+  if(!confirm("Prestige?\nLevel → 1 · +5 rerolls · soft-reset drafts\nKeeps: milestones, bans, profession slots & skills, profession coin spend")) return;
+  // Return non-profession skills to pool
+  const keep=new Set();
+  if(state.mods&&state.mods.professions){
+    [state.mods.gatherSkill, state.mods.craftSkill, ...(state.extraProfessions||[])].forEach(s=>{ if(s) keep.add(s); });
+  }
+  state.picked.forEach(c=>{
+    if(keep.has(c)) return;
+    if(!state.remaining.includes(c)&&c!==FREE_PICK) state.remaining.push(c);
+  });
   if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)) state.remaining.push(FREE_PICK);
-  state.picked=[]; state.level=1; state.xp=0; state.prestige+=1; state.rerolls+=5;
-  state.levelsSinceReward=0; state.generateCharges=0; state.chargesSpent=0; state.starterUses=0;
-  syncMilestoneSlots(); clearQuestState(); state.starterToken=true; state.starterItemToken=true; exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
+  // Soft-reset picks but keep profession skills
+  state.picked = [...keep];
+  state.level=1; state.xp=0; state.prestige+=1; state.rerolls+=5;
+  state.levelsSinceReward=0; state.generateCharges=0; state.chargesSpent=0;
+  state.starterUses=0; state.starterItemUses=0;
+  // items soft-reset (skill-gated items re-sync after)
+  if(Array.isArray(state.itemPicked)){
+    state.itemPicked.forEach(c=>{if(!state.itemRemaining.includes(c)) state.itemRemaining.push(c);});
+    state.itemPicked=[];
+  }
+  // professionCoinsSpent stays; never refunded
+  // spendableCoins / totalCoins unchanged (no refund of 10k profession buys)
+  if(typeof applyProfessionFilter==="function") applyProfessionFilter();
+  if(typeof syncSkillItems==="function") syncSkillItems();
+  syncMilestoneSlots(); clearQuestState();
+  state.starterToken=true; state.starterItemToken=true;
+  exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   save(); updateStatus(); renderPicked(); renderMilestones(); renderQuestLog();
-  cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls</p>`;
-  showToast("Prestige #"+state.prestige);
+  if(typeof renderSkillValues==="function") renderSkillValues();
+  pushHistory("Prestige #"+state.prestige+" (professions kept)");
+  cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls · professions kept</p>`;
+  showToast("Prestige #"+state.prestige+" · professions kept");
 }
 function clearQuestState(){
   state.quest=null;
@@ -1222,12 +1380,20 @@ function deathReset(){
   state.starterUses=0;
   state.starterToken=true;
   state.starterItemToken=true;
-  // refund coins spent on item charges
+  // refund coins spent on item charges only (profession purchases stay spent)
   state.spendableCoins=(state.spendableCoins||0)+(state.coinsSpent||0);
   state.coinsSpent=0;
+  // Re-grant primary gather/craft + purchased professions (same as Apply/Refresh Rules)
+  state.skillValues={}; // all skills back to 0 on death
+  if(typeof applyProfessionFilter==="function") applyProfessionFilter();
+  if(typeof syncSkillItems==="function") syncSkillItems();
+  // professionCoinsSpent is never reduced / refunded
   clearQuestState();
+  pushHistory("Death reset");
+  if(typeof renderSkillValues==="function") renderSkillValues();
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   save(); updateStatus(); renderPicked(); renderQuestLog();
+  if(typeof renderSkillValues==="function") renderSkillValues();
   cardsEl.innerHTML=`<p class="empty">Death reset · charges, coins & quests restored</p>`;
   showToast("Death reset");
 }
@@ -1238,11 +1404,12 @@ function fullReset(){
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),unlockedSlots:0,
     level:1,xp:0,totalXp:0,prestige:0,rerolls:0,generateCharges:0,itemCharges:0,chargesSpent:0,itemChargesSpent:0,
     levelsSinceReward:0,starterUses:0,
-    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith"},
+    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
     itemRemaining:defaultItemPool("packed"),itemPicked:[],
     quest:null, questStreak:0, questCooldownUntil:0, questChoices:null,
     totalCoins:0, spendableCoins:0, coinsSpent:0, starterToken:true, starterItemToken:true,
-    itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null)
+    itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+    skillValues:{}, extraProfessions:[], professionCoinsSpent:0, history:[]
   };
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   save();
@@ -1271,9 +1438,26 @@ function showConfirm(){
 
 function openPickModal(mode){
   currentMode=mode;
-  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&prereqsMet(x)&&!isBlockedByProfession(x));
+  const gold=!!window._freePickGolden;
+  if(mode==="freeItem"){
+    const choices=(state.itemRemaining||[]).filter(Boolean);
+    // also allow individual unpacked items not yet picked
+    if(!choices.length) return showToast("No items available");
+    $("modalTitle").textContent=gold?"Golden Free Pick (Item)":"Free Pick — Item";
+    $("pickList").innerHTML="";
+    choices.forEach(item=>{
+      const b=document.createElement("button"); b.textContent=item;
+      b.onclick=()=>finalizePick(item);
+      $("pickList").appendChild(b);
+    });
+    modal.classList.add("open");
+    return;
+  }
+  // free / manual skill
+  const ignorePrereq=mode==="free" || !!(state.mods&&state.mods.ignorePrereqs);
+  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&(ignorePrereq||prereqsMet(x))&&!isBlockedByProfession(x));
   if(!choices.length) return showToast("None available");
-  $("modalTitle").textContent=mode==="free"?"Free Pick":"Manual Pick";
+  $("modalTitle").textContent=mode==="free"?(gold?"Golden Free Pick (Skill)":"Free Pick"):"Manual Pick";
   $("pickList").innerHTML="";
   choices.forEach(item=>{
     const b=document.createElement("button"); b.textContent=item+(hasPrereq(item)?" ★":"");
@@ -1281,16 +1465,124 @@ function openPickModal(mode){
   });
   modal.classList.add("open");
 }
-function finalizePick(item){
-  state.remaining=state.remaining.filter(x=>x!==item);
+function grantSkill(item){
+  if(!item||item===FREE_PICK) return;
   if(!state.picked.includes(item)) state.picked.push(item);
+  state.remaining=state.remaining.filter(x=>x!==item);
+  if(typeof syncSkillItems==="function") syncSkillItems();
+}
+function grantItem(item){
+  if(!item) return;
+  if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
+  state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+}
+function finalizePick(item){
+  const gold=!!window._freePickGolden;
+  if(currentMode==="freeItem"){
+    // Packed golden free pick: 2 picks; Unpacked golden: whole pack
+    const mode=state.mods&&state.mods.itemMode;
+    if(gold && mode==="unpacked"){
+      const pk=packForItem(item);
+      if(pk && typeof ITEM_PACKS!=="undefined"){
+        (ITEM_PACKS[pk]||[]).forEach(grantItem);
+        pushHistory("Golden Free Pick item pack: "+pk);
+        showToast("Golden Free Pick → full pack "+pk);
+      } else {
+        grantItem(item);
+        pushHistory("Golden Free Pick item: "+item);
+        showToast("Golden Free Pick → "+item);
+      }
+      if(freePickCardEl){
+        document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+        freePickCardEl.classList.add("selected");
+        const h=freePickCardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+        const n=freePickCardEl.querySelector(".name"); if(n) n.textContent=pk?("✦ "+pk):item;
+      }
+      window._freePickGolden=false;
+      closeModal(); generateCards=[]; pendingSelect=null; hideConfirm();
+      save(); updateStatus(); renderPicked();
+      return;
+    }
+    if(gold && mode==="packed"){
+      grantItem(item);
+      // second pick
+      window._freePickSecond=true;
+      window._freePickGolden=true; // keep for label
+      const left=(state.itemRemaining||[]).filter(x=>x!==item);
+      if(!left.length){
+        window._freePickSecond=false; window._freePickGolden=false;
+        closeModal(); generateCards=[]; pendingSelect=null; hideConfirm();
+        save(); updateStatus(); renderPicked();
+        pushHistory("Golden Free Pick items: "+item);
+        showToast("Golden Free Pick → "+item+" (no second item left)");
+        return;
+      }
+      $("modalTitle").textContent="Golden Free Pick — choose 2nd item";
+      $("pickList").innerHTML="";
+      left.forEach(it=>{
+        const b=document.createElement("button"); b.textContent=it;
+        b.onclick=()=>{
+          grantItem(it);
+          if(freePickCardEl){
+            document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+            freePickCardEl.classList.add("selected");
+            const h=freePickCardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+            const n=freePickCardEl.querySelector(".name"); if(n) n.textContent=item+" + "+it;
+          }
+          window._freePickSecond=false; window._freePickGolden=false;
+          closeModal(); generateCards=[]; pendingSelect=null; hideConfirm();
+          save(); updateStatus(); renderPicked();
+          pushHistory("Golden Free Pick items: "+item+", "+it);
+          showToast("Golden Free Pick → "+item+" + "+it);
+        };
+        $("pickList").appendChild(b);
+      });
+      return;
+    }
+    // normal item free pick
+    grantItem(item);
+    if(freePickCardEl){
+      document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+      freePickCardEl.classList.add("selected");
+      const h=freePickCardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+      const n=freePickCardEl.querySelector(".name"); if(n) n.textContent=item;
+    }
+    window._freePickGolden=false;
+    closeModal(); generateCards=[]; pendingSelect=null; hideConfirm();
+    save(); updateStatus(); renderPicked();
+    pushHistory("Free Pick item: "+item);
+    showToast("Free Pick → "+item);
+    return;
+  }
+
+  // Skills
+  if(currentMode==="free" && gold && !(state.mods&&state.mods.ignorePrereqs)){
+    const tied=skillsTiedByPrereq(item);
+    tied.forEach(grantSkill);
+    if(freePickCardEl){
+      document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
+      freePickCardEl.classList.add("selected");
+      const h=freePickCardEl.querySelector(".hint"); if(h) h.textContent="Locked in";
+      const n=freePickCardEl.querySelector(".name"); if(n) n.textContent=tied.join(" + ");
+    }
+    window._freePickGolden=false;
+    closeModal(); generateCards=[]; pendingSelect=null; hideConfirm();
+    save(); updateStatus(); renderPicked(); renderSkillValues();
+    pushHistory("Golden Free Pick skills: "+tied.join(", "));
+    showToast("Golden Free Pick → "+tied.join(", "));
+    return;
+  }
+
+  grantSkill(item);
   if(currentMode==="free"&&freePickCardEl){
     document.querySelectorAll(".card").forEach(c=>{c.classList.remove("selected","pending");c.style.pointerEvents="none";});
     freePickCardEl.classList.add("selected");
     freePickCardEl.querySelector(".hint").textContent="Locked in";
     freePickCardEl.querySelector(".name").textContent=item;
   }
+  window._freePickGolden=false;
   closeModal(); save(); updateStatus(); renderPicked();
+  if(currentMode==="free") pushHistory("Free Pick skill: "+item);
   showToast(currentMode==="free"?"Free Pick → "+item:"Added: "+item);
 }
 function closeModal(){modal.classList.remove("open");currentMode=null;freePickCardEl=null;}
@@ -1314,6 +1606,10 @@ function generate(kind){
     pool=buildItemPool(generateExclude);
   } else {
     pool=buildPool("generate",true,generateExclude);
+    if(Math.random()<freePickChance()){
+      const isGold=Math.random()<goldenChance();
+      pool.push({name:FREE_PICK, weighted:isGold, golden:isGold, freePick:true});
+    }
   }
   if(!pool.length){
     if(generateKind==="item"){ state.itemCharges=(state.itemCharges||0)+1; state.itemChargesSpent=Math.max(0,(state.itemChargesSpent||0)-1); }
@@ -1323,6 +1619,7 @@ function generate(kind){
   }
   generateCards=shuffle(pool).slice(0,Math.min(3,pool.length));
   generateCards.forEach(c=>generateExclude.add(c.name));
+  pushHistory(generateKind==="item"?"Item card gen":"Skill card gen");
   save(); updateStatus();
   renderGenerateCards();
 }
@@ -1330,17 +1627,28 @@ function renderGenerateCards(){
   cardsEl.innerHTML="";
   generateCards.forEach((entry,index)=>{
     const item=entry.name;
-    let cls="card"+(item===FREE_PICK?" freepick":"")+(entry.weighted?" weighted":"");
+    let cls="card"+(item===FREE_PICK?" freepick":"")+(entry.weighted||entry.golden?" weighted":"");
     if(pendingSelect&&pendingSelect.item===item) cls+=" pending";
     const card=document.createElement("div"); card.className=cls;
-    card.innerHTML=`${entry.weighted?'<div class="badge">Weighted</div>':''}<div class="number">#${index+1}</div><div class="name">${item}</div><div class="hint">${item===FREE_PICK?"Click to choose freely":"Click to select · Confirm to lock"}</div><button class="reroll-one" data-idx="${index}" ${state.rerolls<1?"disabled":""}>Reroll (1 token)</button>`;
+    let badge="";
+    if(entry.freePick && entry.golden) badge='<div class="badge">Golden Free</div>';
+    else if(entry.freePick) badge='<div class="badge">Free Pick</div>';
+    else if(entry.golden) badge='<div class="badge">Golden Pack</div>';
+    else if(entry.weighted) badge='<div class="badge">Weighted</div>';
+    const hint=entry.freePick?(entry.golden?"Golden free pick — special rewards":"Click to choose freely"):(entry.golden?"Unlocks entire pack":"Click to select · Confirm to lock");
+    card.innerHTML=`${badge}<div class="number">#${index+1}</div><div class="name">${item}</div><div class="hint">${hint}</div><button class="reroll-one" data-idx="${index}" ${state.rerolls<1?"disabled":""}>Reroll (1 token)</button>`;
     card.addEventListener("click",e=>{
       if(e.target.classList.contains("reroll-one")) return;
-      if(item===FREE_PICK){ freePickCardEl=card; openPickModal("free"); return; }
-      // pending select
+      if(item===FREE_PICK || entry.freePick){
+        freePickCardEl=card;
+        pendingSelect={item:FREE_PICK, cardEl:card, kind:generateKind, index, golden:!!entry.golden, freePick:true};
+        window._freePickGolden=!!entry.golden;
+        openPickModal(generateKind==="item"?"freeItem":"free");
+        return;
+      }
       document.querySelectorAll(".card").forEach(c=>c.classList.remove("pending"));
       card.classList.add("pending");
-      pendingSelect={item, cardEl:card, kind:generateKind, index};
+      pendingSelect={item, cardEl:card, kind:generateKind, index, golden:!!entry.golden, packName:entry.packName||null};
       showConfirm();
     });
     const rb=card.querySelector(".reroll-one");
@@ -1372,21 +1680,34 @@ function lockPendingCard(buyAnother){
     const rb=cardEl.querySelector(".reroll-one"); if(rb) rb.remove();
   }
   if(kind==="item"){
-    state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
-    if(state.mods&&state.mods.itemMode==="packed" && typeof ITEM_PACKS!=="undefined"){
-      Object.keys(ITEM_PACKS).forEach(pk=>{
-        if((ITEM_PACKS[pk]||[]).includes(item)){
-          state.itemRemaining=state.itemRemaining.filter(x=>x!==pk);
-        }
+    // Golden pack unlocks all items in that pack
+    if(pendingSelect&&pendingSelect.golden&&pendingSelect.packName&&typeof ITEM_PACKS!=="undefined"){
+      const pk=pendingSelect.packName;
+      const items=ITEM_PACKS[pk]||[];
+      items.forEach(it=>{
+        if(!state.itemPicked.includes(it)) state.itemPicked.push(it);
+        state.itemRemaining=state.itemRemaining.filter(x=>x!==it);
       });
+      pushHistory("Golden pack unlocked: "+pk+" ("+items.length+" items)");
+    } else {
+      state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
+      if(state.mods&&state.mods.itemMode==="packed" && typeof ITEM_PACKS!=="undefined"){
+        Object.keys(ITEM_PACKS).forEach(pk=>{
+          if((ITEM_PACKS[pk]||[]).includes(item)){
+            state.itemRemaining=state.itemRemaining.filter(x=>x!==pk);
+          }
+        });
+      }
+      if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
     }
-    if(!state.itemPicked.includes(item)) state.itemPicked.push(item);
   } else {
     state.remaining=state.remaining.filter(x=>x!==item);
     if(!state.picked.includes(item)) state.picked.push(item);
+    if(typeof syncSkillItems==="function") syncSkillItems();
   }
   generateCards=[]; pendingSelect=null; hideConfirm();
   save(); updateStatus(); renderPicked();
+  pushHistory((kind==="item"?"Item":"Skill")+" draft: "+item);
   showToast("Locked: "+item);
   if(buyAnother){
     if(kind!=="item") return showToast("Buy another only works for item rolls");
@@ -1411,6 +1732,7 @@ function confirmAndBuyAnother(){
 function exitStarterMode(){starterMode=false;starterIsItems=false;starterCards=[];$("starterBar").classList.remove("active");}
 function startStarter(){
   if(!state.starterToken) return showToast("Starter Draft already used — Death/Full Reset to restore");
+  if(typeof applyProfessionFilter==="function") applyProfessionFilter();
   starterMode=true; starterIsItems=false; generateCards=[]; pendingSelect=null; hideConfirm();
   $("starterBar").classList.add("active"); starterCards=[];
   const ht=$("starterBar")&&$("starterBar").querySelector(".hint-text");
@@ -1552,6 +1874,7 @@ function finalizeStarter(){
     return;
   }
   names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
+  if(typeof syncSkillItems==="function") syncSkillItems();
   exitStarterMode();
   state.starterToken=false;
   cardsEl.innerHTML=`<p class="empty">Finalized! ${names.length} card(s)</p>`;
@@ -1568,6 +1891,7 @@ function buyItemCharge(){
   state.coinsSpent=(state.coinsSpent||0)+cost;
   state.itemCharges=(state.itemCharges||0)+1;
   save(); updateStatus();
+  pushHistory("Coins spent: −"+cost+" (item gen charge)");
   showToast("Purchased +1 Item gen roll (−"+cost+" coins)");
 }
 function openManualItem(){
@@ -1656,6 +1980,7 @@ function syncModUI(){
   $("modStarterLimit").checked=!!state.mods.starterLimitOn;
   $("modStarterMax").value=state.mods.starterMax==null?"":state.mods.starterMax;
   $("modItemDraft").checked=!!state.mods.itemDraft;
+  if($("modSkillItems")) $("modSkillItems").checked=!!state.mods.skillItems;
   if($("modItemMode")) $("modItemMode").value=state.mods.itemMode||"packed";
   if($("modDraftReroll")) $("modDraftReroll").checked=!!state.mods.draftReroll;
   if($("modQuests")) $("modQuests").checked=!!state.mods.questsEnabled;
@@ -1675,6 +2000,8 @@ function syncEditUI(){
   $("editPrestige").value=state.prestige;
   $("editStarterUses").value=state.starterUses;
   if($("editStarterItemUses")) $("editStarterItemUses").value=state.starterItemUses||0;
+  if($("editGoldenChance")) $("editGoldenChance").value = (state.mods.goldenChance!=null?state.mods.goldenChance:0.15);
+  if($("editFreePickChance")) $("editFreePickChance").value = (state.mods.freePickChance!=null?state.mods.freePickChance:0.15);
 }
 function applyEditValues(){
   state.generateCharges=Math.max(0,parseInt($("editCharges").value,10)||0);
@@ -1686,6 +2013,10 @@ function applyEditValues(){
   state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
   state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
   if($("editStarterItemUses")) state.starterItemUses=Math.max(0,parseInt($("editStarterItemUses").value,10)||0);
+  if($("editGoldenChance")) state.mods.goldenChance=Math.max(0,Math.min(1, parseFloat($("editGoldenChance").value)));
+  if($("editFreePickChance")) state.mods.freePickChance=Math.max(0,Math.min(1, parseFloat($("editFreePickChance").value)));
+  if(isNaN(state.mods.goldenChance)) state.mods.goldenChance=0.15;
+  if(isNaN(state.mods.freePickChance)) state.mods.freePickChance=0.15;
   save(); updateStatus(); renderMilestones();
   showToast("Values updated");
 }
@@ -1757,14 +2088,92 @@ function importSave(file){
   r.readAsText(file);
 }
 
+
+function pushHistory(msg){
+  if(!Array.isArray(state.history)) state.history=[];
+  const ts=new Date().toLocaleTimeString();
+  state.history.unshift({t:ts, msg:String(msg)});
+  state.history=state.history.slice(0,20);
+  renderHistory();
+}
+function renderHistory(){
+  const el=$("historyList"); if(!el) return;
+  if(!state.history||!state.history.length){ el.innerHTML='<span style="color:#555">No actions yet</span>'; return; }
+  el.innerHTML=state.history.map(h=>`<div><span style="color:#666">${h.t}</span> — ${h.msg}</div>`).join("");
+}
+function skillVal(name){
+  const v=state.skillValues&&state.skillValues[name];
+  return typeof v==="number" ? v : null;
+}
+function renderSkillValues(){
+  const list=$("skillValuesList"); const sel=$("skillValueSelect");
+  if(!list||!sel) return;
+  const drafted=(state.picked||[]).filter(s=>s!==FREE_PICK);
+  sel.innerHTML=drafted.length?drafted.map(s=>`<option value="${s}">${s}</option>`).join(""):`<option value="">(draft skills first)</option>`;
+  const entries=Object.entries(state.skillValues||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(!entries.length){ list.innerHTML='<span style="color:#555;font-size:.85rem">No skill values recorded</span>'; return; }
+  list.innerHTML=entries.map(([n,v])=>`<div style="display:flex;justify-content:space-between;gap:.5rem;background:#1c1c24;border:1px solid #2a2a35;border-radius:8px;padding:.35rem .6rem"><span>${n}</span><strong style="color:#a29bfe">${Number(v).toFixed(1)}</strong></div>`).join("");
+}
+function saveSkillValue(){
+  const name=($("skillValueSelect")&&$("skillValueSelect").value)||"";
+  let val=parseFloat($("skillValueInput")&&$("skillValueInput").value);
+  if(!name) return showToast("Pick a skill");
+  if(isNaN(val)) return showToast("Enter a value");
+  val=Math.max(0, Math.min(125, val));
+  if(!state.skillValues) state.skillValues={};
+  state.skillValues[name]=Math.round(val*10)/10;
+  if($("skillValueInput")) $("skillValueInput").value="";
+  save(); renderSkillValues(); pushHistory("Skill value: "+name+" = "+state.skillValues[name]);
+  showToast(name+": "+state.skillValues[name]);
+}
+
 function playerSkills(){ return new Set(state.picked||[]); }
+function hasCombatSkill(){
+  const skills=playerSkills();
+  return (typeof COMBAT_SKILLS!=="undefined"?COMBAT_SKILLS:[]).some(s=>skills.has(s));
+}
+function monsterEligible(m){
+  if(!m) return false;
+  if(!hasCombatSkill()) return false;
+  const lv=state.level||1;
+  const minL=Math.max(1, parseInt(m.minLevel,10)||1);
+  if(lv < minL) return false;
+  if(m.maxLevel!=null && lv > parseInt(m.maxLevel,10)) return false;
+  return true;
+}
+function craftQuestEligible(def){
+  if(!def) return false;
+  const skills=playerSkills();
+  if(def.requires&&def.requires.length && !def.requires.some(r=>skills.has(r))) return false;
+  // skill value gates (use highest matching required skill)
+  const reqs=def.requires||[];
+  for(const r of reqs){
+    if(!skills.has(r)) continue;
+    const v=skillVal(r);
+    if(v==null) continue; // no recorded value = allow
+    const minS=def.minSkill!=null?Number(def.minSkill):0;
+    const maxS=def.maxSkill!=null?Number(def.maxSkill):125;
+    if(v < minS || v > maxS) return false;
+  }
+  const minLv=Math.max(1, parseInt(def.minLevel,10)||1);
+  if((state.level||1) < minLv) return false;
+  if(def.maxLevel!=null && (state.level||1) > parseInt(def.maxLevel,10)) return false;
+  return true;
+}
+function npcQuestEligible(def){
+  if(!def) return false;
+  const lv=state.level||1;
+  const minL=Math.max(1, parseInt(def.minLevel,10)||1);
+  if(lv < minL) return false;
+  if(def.requiresPrestige && !(state.prestige>0)) return false;
+  return true;
+}
 function questEligible(def){
   if(!def) return false;
-  const minLv = Math.max(1, parseInt(def.minLevel,10)||1);
-  if((state.level||1) < minLv) return false;
-  if(!def.requires||!def.requires.length) return true;
-  const skills=playerSkills();
-  return def.requires.some(r=>skills.has(r));
+  if(def._src==="monster") return monsterEligible(def);
+  if(def._src==="craft") return craftQuestEligible(def);
+  if(def._src==="npc") return npcQuestEligible(def);
+  return false;
 }
 function questCooldownMs(){
   return Math.max(1, parseInt(state.mods.questCooldownMinutes,10)||60) * 60 * 1000;
@@ -1817,16 +2226,60 @@ function rollQuestCount(def){
   const b=Math.max(a, parseInt(def.countMax,10)||a);
   return a + Math.floor(Math.random()*(b-a+1));
 }
+function buildQuestPool(){
+  const pool=[];
+  (typeof MONSTER_POOL!=="undefined"?MONSTER_POOL:[]).forEach(m=>{
+    const def={
+      _src:"monster", id:"kill_"+m.id, type:"kill",
+      title:"Kill {x} "+m.name+" creatures",
+      description:m.description||"",
+      countMin:m.countMin, countMax:m.countMax,
+      minLevel:m.minLevel, maxLevel:m.maxLevel,
+      reward:{ kind:"xp_pct", value:m.rewardPct!=null?m.rewardPct:0.15 },
+      requires: (typeof COMBAT_SKILLS!=="undefined"?COMBAT_SKILLS:[])
+    };
+    if(questEligible(def)) pool.push(def);
+  });
+  (typeof CRAFT_QUESTS!=="undefined"?CRAFT_QUESTS:[]).forEach(c=>{
+    const def={
+      _src:"craft", id:c.id, type:"craft",
+      title:c.title, description:c.description||"",
+      countMin:c.countMin, countMax:c.countMax,
+      minLevel:c.minLevel, maxLevel:c.maxLevel,
+      minSkill:c.minSkill, maxSkill:c.maxSkill,
+      reward:{ kind:"xp", value:c.rewardXp||0 },
+      requires:c.requires?[...c.requires]:[]
+    };
+    if(questEligible(def)) pool.push(def);
+  });
+  (typeof NPC_QUESTS!=="undefined"?NPC_QUESTS:[]).forEach(n=>{
+    const def={
+      _src:"npc", id:n.id, type:"npc",
+      title:"Complete "+n.name+"'s tribute quest",
+      description:n.description||"Complete this npc's tribute quest",
+      reward:{ kind:"xp", value:n.rewardXp||1000 },
+      minLevel:n.minLevel, requiresPrestige:!!n.requiresPrestige,
+      requires:[]
+    };
+    if(questEligible(def)) pool.push(def);
+  });
+  return pool;
+}
 function makeQuestInstance(def){
-  const count=rollQuestCount(def);
+  const count=def.type==="npc" ? 1 : rollQuestCount(def);
   return {
     defId: def.id,
     type: def.type,
+    _src: def._src,
     title: (def.title||"").replace(/\{x\}/gi, String(count)),
     description: def.description||"",
     count,
     reward: def.reward?{...def.reward}: {kind:"xp", value:0},
-    requires: def.requires?[...def.requires]:[]
+    requires: def.requires?[...def.requires]:[],
+    // kill quest progress tracking (avoid double-dip)
+    killsLogged: 0,
+    sessionXp: 0,
+    totalQuestXp: 0
   };
 }
 function generateQuest(){
@@ -1834,7 +2287,7 @@ function generateQuest(){
   if(questOnCooldown()) return showToast("Quest on cooldown");
   if(state.quest) return showToast("Finish or skip your current quest first");
   if(state.questChoices&&state.questChoices.length) return showToast("Pick one of the offered quests first");
-  const pool=shuffle(QUEST_DEFS.filter(questEligible));
+  const pool=shuffle(buildQuestPool());
   if(!pool.length) return showToast("No quests available for your level/skills");
   state.questChoices=pool.slice(0,Math.min(3,pool.length)).map(makeQuestInstance);
   state.quest=null;
@@ -1852,6 +2305,25 @@ function chainMultiplier(){
   // Bonus applies on the Nth completion in a row (e.g. 10th), then streak resets
   const next = (state.questStreak||0) + 1;
   return next >= QUEST_CHAIN_BONUS_AT ? QUEST_CHAIN_BONUS_MULT : 1;
+}
+
+function addQuestSessionXp(){
+  if(!state.quest) return;
+  const inp=$("questSessionXp");
+  const amt=Math.max(0, parseInt(inp&&inp.value,10)||0);
+  if(amt<=0) return showToast("Enter session XP gained");
+  state.quest.sessionXp=(state.quest.sessionXp||0)+amt;
+  state.quest.totalQuestXp=(state.quest.totalQuestXp||0)+amt;
+  if(inp) inp.value="";
+  save(); renderQuestLog();
+  showToast("+"+amt+" to quest total ("+state.quest.totalQuestXp+")");
+}
+function setQuestKills(){
+  if(!state.quest) return;
+  const inp=$("questKillsLogged");
+  const k=Math.max(0, parseInt(inp&&inp.value,10)||0);
+  state.quest.killsLogged=k;
+  save(); renderQuestLog();
 }
 function completeQuest(){
   if(!state.quest) return;
@@ -1884,8 +2356,9 @@ function completeQuest(){
       msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
     }
   } else if(q.reward.kind==="xp_pct"){
-    // Typed XP (from kills) is granted in full, plus percentage bonus (chain multiplies the bonus only)
-    const baseXp=Math.max(0, parseInt(($("questXpEarned")&&$("questXpEarned").value)||"0",10)||0);
+    // Use accumulated totalQuestXp from the quest tracker (no double-dip)
+    const baseXp=Math.max(0, Number(q.totalQuestXp)||0);
+    if(baseXp<=0) return showToast("Log session XP gains on this quest first");
     const bonus=Math.ceil(baseXp*(q.reward.value||0)*mult);
     const xp=baseXp+bonus;
     state.xp+=xp; state.totalXp+=xp;
@@ -1923,6 +2396,7 @@ function completeQuest(){
   state.quest=null;
   state.questCooldownUntil=Date.now()+questCooldownMs();
   save(); renderQuestLog(); updateStatus(); renderMilestones();
+  pushHistory("Quest complete: "+(q.title||"")+" · "+msg);
   showToast(msg+" · chain "+streakMsg);
 }
 function skipQuest(){
@@ -1932,6 +2406,7 @@ function skipQuest(){
   state.questChoices=null;
   state.questStreak=0;
   state.questCooldownUntil=Date.now()+questCooldownMs();
+  pushHistory("Quest skipped");
   save(); renderQuestLog(); updateQuestButton();
   showToast("Quest skipped · chain reset");
 }
@@ -1955,7 +2430,7 @@ function renderQuestLog(){
   if(state.questChoices&&state.questChoices.length){
     body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose one quest:</p>`+
       state.questChoices.map((q,i)=>`<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
-        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":"Slaying"} · ${(q.description||"").slice(0,80)}</span>
+        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":"Slaying")} · ${(q.description||"").slice(0,80)}</span>
       </button>`).join("")+
       `<div class="ql-actions" style="margin-top:.5rem"><button class="ql-skip" id="questSkipBtn">Skip Offers</button></div>
       <div class="ql-chain">${chainNote}</div>`;
@@ -1969,8 +2444,7 @@ function renderQuestLog(){
     return;
   }
   const q=state.quest;
-  const type=q.type==="craft"?"craft":"kill";
-  const typeLabel=type==="craft"?"Crafting":"Monster Slaying";
+  const type=q.type==="craft"?"craft":(q.type==="npc"?"npc":"kill");
   let rewardLine="";
   if(q.reward.kind==="xp"){
     const base=q.reward.value||0;
@@ -1980,15 +2454,25 @@ function renderQuestLog(){
     const pct=Math.round((q.reward.value||0)*100);
     rewardLine=`Reward: <strong>XP you enter</strong> + <strong>${pct}%</strong> bonus`+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
   }
-  const xpField=q.reward.kind==="xp_pct"
-    ? `<input class="ql-xp" id="questXpEarned" type="number" min="0" placeholder="XP earned from kills (full amount + bonus applied)">`
-    : "";
+  let typeLabel=type==="craft"?"Crafting":(type==="npc"?"NPC Tribute":"Monster Slaying");
+  let progress="";
+  if(q.type==="kill" || q.reward.kind==="xp_pct"){
+    progress=`
+      <div class="ql-meta" style="margin-top:.35rem">
+        Kills logged: <strong>${q.killsLogged||0}</strong> / target ${q.count||"?"}
+        · Quest XP total: <strong>${q.totalQuestXp||0}</strong>
+      </div>
+      <input class="ql-xp" id="questKillsLogged" type="number" min="0" value="${q.killsLogged||0}" placeholder="Kills this quest">
+      <input class="ql-xp" id="questSessionXp" type="number" min="0" placeholder="Session XP gain to add">
+      <button type="button" class="ql-complete" id="questAddXpBtn" style="width:100%;margin-bottom:.45rem;background:#6c5ce7">Add Session XP to Quest Total</button>
+    `;
+  }
   body.innerHTML=`
-    <span class="ql-type ${type}">${typeLabel}</span>
+    <span class="ql-type ${type==="npc"?"craft":type}">${typeLabel}</span>
     <div class="ql-title">${q.title}</div>
     <div class="ql-desc">${q.description||""}</div>
     <div class="ql-meta">${rewardLine}</div>
-    ${xpField}
+    ${progress}
     <div class="ql-actions">
       <button class="ql-complete" id="questCompleteBtn">Finish</button>
       <button class="ql-skip" id="questSkipBtn">Skip Quest</button>
@@ -1996,9 +2480,11 @@ function renderQuestLog(){
     <div class="ql-chain">${chainNote}</div>`;
   const c=$("questCompleteBtn"); if(c) c.onclick=completeQuest;
   const s=$("questSkipBtn"); if(s) s.onclick=skipQuest;
+  const a=$("questAddXpBtn"); if(a) a.onclick=addQuestSessionXp;
+  const k=$("questKillsLogged"); if(k) k.onchange=setQuestKills;
 }
 
-function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();if(typeof renderItemMilestones==="function")renderItemMilestones();syncModUI();renderQuestLog();ensureQuestTimer();}
+function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();if(typeof renderItemMilestones==="function")renderItemMilestones();syncModUI();renderQuestLog();ensureQuestTimer();if(typeof renderSkillValues==="function")renderSkillValues();if(typeof renderHistory==="function")renderHistory();}
 
 function bind(id, fn){ const el=$(id); if(!el){ console.warn("missing #"+id); return; } el.onclick=fn; }
 bind("starterBtn", startStarter);
@@ -2007,11 +2493,24 @@ bind("generateItem", ()=>generate("item"));
 bind("manualItemBtn", openManualItem);
 bind("startItemsBtn", startCombatItems);
 bind("buyItemChargeBtn", buyItemCharge);
+bind("buyProfBtn", openBuyProfession);
+bind("skillValueSave", saveSkillValue);
+bind("skillValuesBtn", ()=>{ if(typeof renderSkillValues==="function") renderSkillValues(); const m=$("skillValuesModal"); if(m) m.classList.add("open"); });
+bind("skillValuesClose", ()=>{ const m=$("skillValuesModal"); if(m) m.classList.remove("open"); });
+const skillValuesModal=$("skillValuesModal");
+if(skillValuesModal) skillValuesModal.onclick=e=>{ if(e.target===skillValuesModal) skillValuesModal.classList.remove("open"); };
+
 bind("questBtn", generateQuest);
 bind("confirmLockBtn", confirmSelection);
 bind("confirmBuyBtn", confirmAndBuyAnother);
 bind("manualPick", ()=>openPickModal("manual"));
 bind("banBtn", ()=>{renderBanSelect();renderBans();$("banModal").classList.add("open");});
+bind("banStarterBtn", ()=>{
+  renderBanSelect(); renderBans();
+  const t=$("banTypeSelect"); if(t) t.value="starter";
+  $("banModal").classList.add("open");
+  showToast("Ban type set to Starter only");
+});
 bind("banClose", ()=>$("banModal").classList.remove("open"));
 const banModal=$("banModal"); if(banModal) banModal.onclick=e=>{if(e.target===banModal)banModal.classList.remove("open");};
 bind("modBtn", ()=>{syncModUI();$("modModal").classList.add("open");});
@@ -2067,6 +2566,7 @@ if(!load()){
   state.remaining=[...MASTER_LIST];
   state.milestones=Array(MAX_MILESTONE_SLOTS).fill(null);
   state.itemRemaining=defaultItemPool(state.mods.itemMode||"packed");
+  if(typeof syncSkillItems==="function") syncSkillItems();
   activeSaveName = activeSaveName || "Default";
   save();
 }
@@ -2082,6 +2582,8 @@ if(MASTER_LIST.includes(FREE_PICK)&&!state.remaining.includes(FREE_PICK)&&!state
 if(!Array.isArray(state.itemRemaining) || (state.itemRemaining.length===0 && (!state.itemPicked||state.itemPicked.length===0))){
   state.itemRemaining=defaultItemPool((state.mods&&state.mods.itemMode)||"packed");
 }
+if(typeof applyProfessionFilter==="function") applyProfessionFilter();
+if(typeof syncSkillItems==="function") syncSkillItems();
 try { renderAll(); }
 catch(e){ console.error(e); showToast("UI error — try Full Reset in Tools"); }
 renderLandingList();
