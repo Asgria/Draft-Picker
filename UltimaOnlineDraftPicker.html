@@ -1033,7 +1033,8 @@ const COMBAT_STARTER_ITEMS = {
 
 // ============================================================
 //  QUESTS — easy to expand
-//  MONSTER_POOL: kill targets (level gates). Combat skills are shared.
+//  MONSTER_POOL: kill targets (level, optional requiresPrestige).
+//  Rewards: rewardPct (session XP %), rewardXp (static XP) — use either or both.
 //  CRAFT_QUESTS: still need requires + optional minSkill/maxSkill (0-125)
 //  NPC_QUESTS: tribute quests (minLevel, requiresPrestige, rewardXp editable)
 // ============================================================
@@ -1043,9 +1044,81 @@ const MONSTER_POOL = [
   {
     id: "dragons",
     name: "Dragons",
-    description: "Dragons include drakes, wyverns, dragons, greater dragons, gem dragons, wyrms, and ancient wyrms.",
-    countMin: 25, countMax: 50,
-    minLevel: 25, maxLevel: null,
+    description: "Dragons include drakes, skeletal dragons and dragons, wyverns, dragons, greater dragons, gem dragons, wyrms, and ancient wyrms.",
+    countMin: 5, countMax: 50,
+    minLevel: 75, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "drakes",
+    name: "drake",
+    description: "Take forth and hunt and take down drakes!.",
+    countMin: 5, countMax: 10,
+    minLevel: 55, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "wyverns",
+    name: "wyverns",
+    description: "Take forth and hunt and take down wyverns!.",
+    countMin: 5, countMax: 10,
+    minLevel: 55, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "dragon",
+    name: "dragon",
+    description: "Explore the lands, and find dragon nests, and slay the dragons!",
+    countMin: 5, countMax: 10,
+    minLevel: 65, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "wyrms",
+    name: "wyrms",
+    description: "Hunt the lands and dungeons find the nests of Wyrms!",
+    countMin: 5, countMax: 10,
+    minLevel: 70, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "hydra",
+    name: "hydra",
+    description: "Hydras have been sighted take down this horrible creatures!",
+    countMin: 5, countMax: 10,
+    minLevel: 65, maxLevel: null,
+    rewardPct: 0.30
+  },
+  {
+    id: "demons",
+    name: "Demons",
+    description: "Slay any balrogs, demons, succubuses, gargoyles, imp, hell hound",
+    countMin: 5, countMax: 50,
+    minLevel: 75, maxLevel: null,
+    rewardPct: 0.15
+  },
+  {
+    id: "Goliaths",
+    name: "Goliaths",
+    description: "Slay any Cyclops, ettins, giants, ogres, titans, and trolls you see.",
+    countMin: 5, countMax: 50,
+    minLevel: 10, maxLevel: null,
+    rewardPct: 0.15
+  },
+  {
+    id: "Elemental",
+    name: "Elemental",
+    description: "Slay any Elementals.",
+    countMin: 5, countMax: 50,
+    minLevel: 10, maxLevel: null,
+    rewardPct: 0.15
+  },
+  {
+    id: "Weedeater",
+    name: "Weedeater",
+    description: "Slay any plant based foe.",
+    countMin: 5, countMax: 10,
+    minLevel: 20, maxLevel: 40,
     rewardPct: 0.15
   },
   {
@@ -1057,13 +1130,131 @@ const MONSTER_POOL = [
     rewardPct: 0.15
   },
   {
+    id: "brigand",
+    name: "brigand",
+    description: "Defeat brigands!",
+    countMin: 5, countMax: 10,
+    minLevel: 10, maxLevel: 65,
+    rewardPct: 0.15
+  },
+  {
+    id: "orcbolg",
+    name: "orcbolg",
+    description: "Defeat kill the vile orcs!",
+    countMin: 5, countMax: 30,
+    minLevel: 10, maxLevel: 65,
+    rewardPct: 0.15
+  },
+  {
     id: "rodents",
     name: "Rodents",
     description: "Any rat-based creature from sewer rats to ratmen.",
     countMin: 5, countMax: 15,
-    minLevel: 3, maxLevel: 25,
+    minLevel: 1, maxLevel: 25,
     rewardPct: 0.15
-  }
+  },
+  {
+    id: "Banish the Flames",
+    name: "Banish the Flames",
+    description: "Find and defeat Fire elementals!",
+    countMin: 5, countMax: 10,
+    minLevel: 30, maxLevel: 75,
+    rewardPct: 0.30
+  },
+  {
+    id: "Banish the Earth",
+    name: "Banish the Earth",
+    description: "Find and defeat Earth elementals!",
+    countMin: 5, countMax: 10,
+    minLevel: 10, maxLevel: 75,
+    rewardPct: 0.30
+  },
+  {
+    id: "Banish the Air",
+    name: "Banish the Air",
+    description: "Find and defeat Air elementals!",
+    countMin: 5, countMax: 10,
+    minLevel: 10, maxLevel: 75,
+    rewardPct: 0.30
+  },
+  {
+    id: "Banish the Water",
+    name: "Banish the Water",
+    description: "Find and defeat Water elementals!",
+    countMin: 5, countMax: 10,
+    minLevel: 30, maxLevel: 75,
+    rewardPct: 0.30
+  },
+  {
+    id: "ClippedWings",
+    name: "ClippedWings",
+    description: "Find and defeat any Harpies!",
+    countMin: 5, countMax: 20,
+    minLevel: 10, maxLevel: 75,
+    rewardPct: 0.30
+  },
+  {
+    id: "Critters",
+    name: "Critters",
+    description: "The forests are overpopulated with forest critters, rid the over population - any animal llamah to moose to birds",
+    countMin: 20, countMax: 20,
+    minLevel: 1, maxLevel: 13,
+    rewardXp: 300
+  },
+{
+  id: "baracoon",
+  name: "baracoon",
+  description: "Baracoon has been causing issues, challenge him at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+},
+{
+  id: "Neira",
+  name: "Neira",
+  description: "Neira has been causing issues, challenge her at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+},
+{
+  id: "LordOaks",
+  name: "LordOaks",
+  description: "Lord Oaks has been causing issues, challenge him at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+},
+{
+  id: "Rikktor",
+  name: "Rikktor",
+  description: "Rikktor has been causing issues, challenge him at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+},
+{
+  id: "Mephitis",
+  name: "Mephitis",
+  description: "Mephitis has been causing issues, challenge it at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+},
+{
+  id: "Semidar",
+  name: "Semidar",
+  description: "Mephitis has been causing issues, challenge her at a champion spawn and slay him.",
+  countMin: 1, countMax: 1,
+  minLevel: 1, maxLevel: null,
+  requiresPrestige: true,
+  rewardPct: 0.30
+}
 ];
 
 // ============================================================
@@ -1331,8 +1522,32 @@ function expandCraftQuests(){
 const CRAFT_QUESTS = expandCraftQuests();
 
 const NPC_QUESTS = [
-  { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 1000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_merlin", name: "Merlin", description: "Complete this npc's tribute quest", rewardXp: 1000, minLevel: 1, requiresPrestige: false }
+  { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Geoffry", name: "Geoffrey the Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Geoffry", name: "Gwenno the Bard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Iolo", name: "Iolo the Bowman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Katrina", name: "Katrina the Shepherd", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Jaana", name: "Jaana The Herb Healer", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_JMorsGotha", name: "Mors Gotha the Death Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Minax", name: "Minax the Enchantress", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Seggallion", name: "Seggallion The Pirate Lord", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_guardian", name: "The Guardian", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Shamino", name: "Shamino the Woodsman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_nystal", name: "Nystal the royal wizard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_Stefano", name: "Stefano the Sneak", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_draxinusom", name: "Lord Draxinusom the Gargoyle King", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_EarthSerpent", name: "the Great Earth Serpent", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Morphius", name: "Morphius the Vile Lich", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Mondain", name: "Mondain the Wizard", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Tyball", name: "Tyball the Demonologist", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Arcadion", name: "Arcadion the Daemon", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Samhayne", name: "Samhayne the Master Sailor", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Blackthorne", name: "Lord Blackthorne the Ruler of Kuldar", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Shimazu", name: "Shimazu the Shogun Samurai", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Gorn", name: "Gorn the King of Cimmeran", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Dupre", name: "Dupre the Paladin", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Garamon", name: "Garamon the Wizard", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
+  { id: "npc_Lethe", name: "Lethe the Dreaded Lich", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true }
 ];
 
 const GOLDEN_PACK_CHANCE = 0.15;
@@ -3862,6 +4077,8 @@ function monsterEligible(m){
   const minL=Math.max(1, parseInt(m.minLevel,10)||1);
   if(lv < minL) return false;
   if(m.maxLevel!=null && lv > parseInt(m.maxLevel,10)) return false;
+  // Prestige-gated kill targets (requiresPrestige: true on MONSTER_POOL entries)
+  if(m.requiresPrestige && !(state.prestige>0)) return false;
   return true;
 }
 function craftQuestEligible(def){
@@ -3965,13 +4182,27 @@ function rollQuestCount(def){
 function buildQuestPool(){
   const pool=[];
   (typeof MONSTER_POOL!=="undefined"?MONSTER_POOL:[]).forEach(m=>{
+    // rewardPct (session XP %), rewardXp (static XP) — either or both
+    const hasPct = m.rewardPct!=null && Number(m.rewardPct)>0;
+    const hasStatic = m.rewardXp!=null && Number(m.rewardXp)>0;
+    let reward;
+    if(hasPct && hasStatic){
+      reward={ kind:"xp_pct", value:Number(m.rewardPct), staticXp:Number(m.rewardXp) };
+    } else if(hasPct){
+      reward={ kind:"xp_pct", value:Number(m.rewardPct) };
+    } else if(hasStatic){
+      reward={ kind:"xp", value:Number(m.rewardXp) };
+    } else {
+      reward={ kind:"xp_pct", value:0.15 }; // default if neither set
+    }
     const def={
       _src:"monster", id:"kill_"+m.id, type:"kill",
       title:"Kill {x} "+m.name+" creatures",
       description:m.description||"",
       countMin:m.countMin, countMax:m.countMax,
       minLevel:m.minLevel, maxLevel:m.maxLevel,
-      reward:{ kind:"xp_pct", value:m.rewardPct!=null?m.rewardPct:0.15 },
+      requiresPrestige: !!m.requiresPrestige,
+      reward,
       requires: (typeof COMBAT_SKILLS!=="undefined"?COMBAT_SKILLS:[])
     };
     if(questEligible(def)) pool.push(def);
@@ -4140,11 +4371,14 @@ function completeQuest(){
       msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
     }
   } else if(q.reward.kind==="xp_pct"){
-    // Use accumulated totalQuestXp from the quest tracker (no double-dip)
+    // Session XP + % bonus, optional staticXp on top
     const baseXp=Math.max(0, Number(q.totalQuestXp)||0);
-    if(baseXp<=0) return showToast("Log session XP gains on this quest first");
+    const staticXp=Math.max(0, Number(q.reward.staticXp)||0);
+    if(baseXp<=0 && staticXp<=0) return showToast("Log session XP gains on this quest first");
+    if((q.reward.value||0)>0 && baseXp<=0) return showToast("Log session XP gains on this quest first");
     const bonus=Math.ceil(baseXp*(q.reward.value||0)*mult);
-    const xp=baseXp+bonus;
+    const staticPart=Math.ceil(staticXp*mult);
+    const xp=baseXp+bonus+staticPart;
     state.xp+=xp; state.totalXp+=xp;
     let leveled=0;
     const interval=levelsPerCharge();
@@ -4167,9 +4401,11 @@ function completeQuest(){
       const c=Math.ceil(baseXp*(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25));
       state.totalCoins=(state.totalCoins||0)+c;
       state.spendableCoins=(state.spendableCoins||0)+c;
-      msg=`+${xp} XP (${baseXp} + ${bonus} bonus) · +${c} coins`+(mult>1?` (bonus ${mult}× chain)`:"");
+      const staticNote=staticPart?` + ${staticPart} static`:"";
+      msg=`+${xp} XP (${baseXp} + ${bonus} bonus${staticNote}) · +${c} coins`+(mult>1?` (bonus ${mult}× chain)`:"");
     } else {
-      msg=`+${xp} XP (${baseXp} + ${bonus} bonus)`+(mult>1?` (bonus ${mult}× chain)`:"");
+      const staticNote=staticPart?` + ${staticPart} static`:"";
+      msg=`+${xp} XP (${baseXp} + ${bonus} bonus${staticNote})`+(mult>1?` (bonus ${mult}× chain)`:"");
     }
   } else {
     msg="Quest complete";
@@ -4266,7 +4502,8 @@ function renderQuestLog(){
     }
   } else if(q.reward.kind==="xp_pct"){
     const pct=Math.round((q.reward.value||0)*100);
-    rewardLine=`Reward: <strong>XP you enter</strong> + <strong>${pct}%</strong> bonus`+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
+    const st=q.reward.staticXp?` + <strong>${q.reward.staticXp} static XP</strong>`:"";
+    rewardLine=`Reward: <strong>XP you enter</strong>`+(pct?` + <strong>${pct}%</strong> bonus`:``)+st+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
   }
   let typeLabel=type==="craft"?"Crafting":(type==="npc"?"NPC Tribute":"Monster Slaying");
   let progress="";
