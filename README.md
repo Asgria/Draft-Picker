@@ -25,3 +25,5 @@ if you chose it as well item drafts
 (if you chose to have limited starter rolls, you can see in the red circle)
 <img width="1066" height="591" alt="item draft - unpacked" src="https://github.com/user-attachments/assets/2035004a-a775-423c-9311-a889f78dd21d" />
 
+after completing the selection you will receive another pop up, this is also a open-source code it is ran in the tazuo client and can be copy pasted
+<img width="590" height="499" alt="xptrackerlink" src="https://github.com/user-attachments/assets/c036d1f9-72d2-4108-b3ad-72755263eea7" />
