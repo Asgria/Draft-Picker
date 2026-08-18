@@ -1066,16 +1066,269 @@ const MONSTER_POOL = [
   }
 ];
 
-const CRAFT_QUESTS = [
-  { id: "craft_robes", title: "Craft {x} Robes", description: "Sew robes until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Tailoring"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_deadlypoison", title: "Craft {x} deadly poison", description: "Brew deadly poison until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Alchemy"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_citrine", title: "Craft {x} citrine items", description: "Craft any citrine item until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Tinkering"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_elvenshield", title: "Craft {x} elven shields", description: "Smith elven shields until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Blacksmith"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_woodlandshortbow", title: "Craft {x} woodland shortbows", description: "Craft woodland shortbows until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Bowcraft"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_Scrolls", title: "Craft {x} scrolls", description: "Inscribe scrolls until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Inscribe"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_woodenshield", title: "Craft {x} wooden shields", description: "Craft wooden shields until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Carpentry"], minSkill: 0, maxSkill: 125 },
-  { id: "craft_cooking", title: "Cook {x} meals", description: "Cook meals until the count is met.", countMin: 20, countMax: 20, rewardXp: 300, requires: ["Cooking"], minSkill: 0, maxSkill: 125 }
-];
+// ============================================================
+//  CRAFT QUESTS — compact lines:
+//    "Name, minSkill, maxSkill, rewardXp, resourceType"
+//  Optional: ", countMin, countMax" (default 10–40)
+//  resourceType: Metal | Wood | Leather | Cloth (or blank for none)
+//
+//  Reward = baseXp + ceil(baseXp * (count% + resourceBonus%) / 100)
+//  Example: base 200, count 22, DullCopper +15 → 200 + ceil(200*0.37) = 274
+// ============================================================
+const CRAFT_COUNT_DEFAULT = { countMin: 10, countMax: 40 };
+
+// "ResourceName, minSkillRequired, bonusPercent"
+const CRAFT_RESOURCES = {
+  Metal: [
+    "Iron, 0, 0",
+    "Dull Copper, 65, 3",
+    "Shadow Iron, 70, 5",
+    "Copper, 75, 7",
+    "Bronze, 80, 9",
+    "Gold, 85, 12",
+    "Agapite, 90, 16",
+    "Verite, 95, 18",
+    "Valorite, 99, 23",
+    "Nepturite, 99, 27",
+    "Obsidian, 105, 33",
+    "Brass, 105, 33",
+    "Steel, 105, 33",
+    "Mithril, 115, 40",
+    "Dwarvern, 125, 50"
+  ],
+  Wood: [
+    "Wood, 0, 0",
+    "Ash, 65, 8",
+    "Cherry, 70, 10",
+    "Ebony, 75, 13",
+    "Gold Oak, 80, 15",
+    "Hickory, 85, 18",
+    "Mahogany, 90, 22",
+    "Oak, 95, 25",
+    "Pine, 95, 25",
+    "Rosewood, 100, 29",
+    "Walnut, 100, 33",
+    "Ghost, 105, 38",
+    "Petrified, 115, 45",
+    "Driftwood, 115, 45",
+    "Elven, 125, 50"
+
+  ],
+  Leather: [
+    "Leather, 0, 0",
+    "Lizard, 55, 10",
+    "Serpent, 60, 15",
+    "Necrotic, 65, 20",
+    "Volcanic, 70, 25",
+    "Frozen, 75, 30",
+    "Deep Sea, 80, 35",
+    "Goliath, 85, 40",
+    "Draconic, 90, 40",
+    "Hellish, 100, 45",
+    "Dinosaur, 100, 45",
+    "Alien, 125, 50"
+  ],
+  Cloth: [
+    "Cloth, 0, 0",
+    "Furry, 45, 5",
+    "Wooly, 50, 10",
+    "Silk, 60, 15",
+    "Haunted, 65, 20",
+    "Arctic, 70, 25",
+    "Pyre, 75, 30",
+    "Venomous, 75, 30",
+    "Mysterious, 80, 35",
+    "Vile, 90, 40",
+    "Divine, 99, 45",
+    "Fiendish, 105, 50"
+  ]
+};
+
+const CRAFT_BY_SKILL = {
+  Tailoring: [
+    "Skullcap, 0, 25, 200, Cloth", "Bandana, 0, 25, 200, Cloth", "FloppyHat, 6.2, 31.2, 280, Cloth", "Kasa, 60, 125, 1000, Cloth", "Cloth Ninja Hood, 80, 125, 1300, Cloth", "Doublet, 0, 25, 200, Cloth", "Tunic, 0, 25, 200, Cloth", "Shirt, 20.7, 45.7, 300, Cloth", "Gilded Dress, 37.5, 62.5, 380, Cloth", "Cloak, 41.4, 66.4, 430, Cloth", "Royal Cloak, 91.4, 125, 1350, Cloth", "Robes, 53.9, 78.9, 550, Cloth", "Dragon Robe, 70, 95, 750, Cloth", "Sailor Pants, 24.8, 49.8, 350, Cloth", "Skirt, 20.7, 45.7, 300, Cloth", "Belt, 20.7, 45.7, 300, Cloth", "Ninja Belt, 50, 75, 500, Cloth", "Ninja Tabi, 70, 95, 750, Cloth", "Sandals, 12.4, 37.4, 310, Leather", "Leather Sandals, 42.4, 67.4, 440, Leather", "Leather Tight Boots, 71.4, 96.4, 760, Leather", "Hiking Boots, 83.1, 108.1, 1350, Leather", "Leather Gorget, 53.9, 78.9, 550, Leather", "Leather Cap, 6.2, 31.2, 280, Leather", "Leather Gloves, 51.8, 76.8, 540, Leather", "Leather Arms, 53.9, 78.9, 550, Leather", "Leather Legs, 66.3, 91.3, 630, Leather", "Leather Chest, 70.5, 95.5, 850, Leather",
+"Studded Gorget, 78.8, 103.8, 950, Leather", "Studded Gloves, 82.9, 107.9, 1320, Leather", "Studded Arms, 87.1, 112.1, 1350, Leather", "Studded Legs, 91.2, 116.2, 1480, Leather", "Studded Chest, 94.0, 119.0, 1550, Leather"
+  ],
+  Alchemy: [
+    "Agility Potion, 15, 65, 300",
+    "Greater Agility Potion, 35, 65, 400",
+    "Conflagration, 55, 105, 550",
+    "Greater Conflagration, 65, 105, 650",
+    "Confusion Blast Potion, 55, 105, 550",
+    "Greater Confusion Blast Potion, 65, 105, 650",
+    "Frostbite Potion, 55, 105, 550",
+    "Greater Frostbite Potion, 65, 105, 650",
+    "Lesser Cure Potion, 0, 40, 200",
+    "Cure Potion, 25, 75, 250",
+    "Greater Cure Potion, 65, 115, 650",
+    "Lesser Explosion Potion, 5, 55, 220",
+    "Explosion Potion, 35, 85, 400",
+    "Greater Explosion Potion, 65, 115, 650",
+    "Lesser Heal Potion, 0, 25, 200",
+    "Heal Potion, 15, 65, 300",
+    "Greater Cure Potion, 55, 105, 550",
+    "Night Sight Potion, 0, 25, 200",
+    "Lesser Poison Potion, 0, 45, 200",
+    "Poison Potion, 15, 65, 300",
+    "Greater Poison Potion, 35, 85, 400",
+    "Deadly poison, 55, 105, 550",
+    "Lethal Poison Potion, 75, 125, 900",
+    "Refresh Potion, 0, 25, 200",
+    "Total Refresh Potion, 25, 75, 350",
+    "Strength Potion, 25, 75, 350",
+    "Greater Strength Potion, 45, 95, 500",
+    "Smoke bomb, 90, 120, 900",
+    "Any Elixir, 60, 120, 600",
+    "Any Mixtures, 50, 120, 500"
+  ],
+  Tinkering: [
+    "Throwing Weapons, 0, 40, 200",
+    "Candle, 45, 85, 700, Metal, 1, 5",
+    "Candelabra, 55, 95, 800, Metal, 1, 5",
+    "Tall Candelabra, 65, 105, 900, Metal, 1, 5",
+    "Globe, 55, 105, 550, Metal",
+    "Heating Stand, 60, 110, 600, Metal",
+    "Lantern, 30, 80, 400, Metal",
+    "Any Amber Jewelry combination, 45, 90, 700, Metal",
+    "Any Citrine Jewelry combination, 50, 100, 850, Metal",
+    "Any Ruby Jewelry combination, 55, 105, 850, Metal",
+    "Any Tourmaline Jewelry combination, 60, 110, 900, Metal",
+    "Any Amethyst Jewelry combination, 65, 115, 950, Metal",
+    "Any Emerald Jewelry combination, 70, 120, 1000, Metal",
+    "Any Sapphire Jewelry combination, 75, 125, 1050, Metal",
+    "Any Star Sapphire Jewelry combination, 80, 130, 1050, Metal",
+    "Any Diamond Jewelry combination, 85, 135, 1100, Metal",
+    "Any Pearl Jewelry combination, 90, 140, 3000, Metal",
+    "Spoon, 0, 50, 200",
+    "Goblet, 10, 60, 280"
+  ],
+  Blacksmith: [
+    "Buckler, 0, 25, 200, Metal",
+    "Bronze Shield, 0, 34.8, 200, Metal",
+    "Wooden Kite Shield, 0, 34.8, 200, Metal",
+    "Metal Shield, 0, 39.8, 200, Metal",
+    "Metal Kite Shield, 4.6, 54.6, 250, Metal",
+    "Heater Shield, 24.3, 74.3, 400, Metal",
+    "Champion Shield, 54.3, 84.3, 700, Metal",
+    "Crested Shield, 54.3, 84.3, 700, Metal",
+    "Dark Shield, 54.3, 84.3, 700, Metal",
+    "Elven Shield, 54.3, 84.3, 700, Metal",
+    "Guardsman Shield, 54.3, 84.3, 700, Metal",
+    "Jeweled Shield, 54.3, 84.3, 700, Metal",
+    "Royal Shield, 54.3, 84.3, 700, Metal",
+    "Chaos Shield, 85, 135, 1000, Metal",
+    "Order Shield, 85, 135, 1000, Metal",
+    "Sun Shield, 85, 135, 1000, Metal",
+    "Virtue Shield, 85, 135, 1000, Metal"
+  ],
+  Bowcraft: [
+    "Arrow or Bolt, 0, 40, 100",
+    "Bow, 30, 70, 150, Wood",
+    "Magical Shortbow, 50, 80, 200, Wood",
+    "Elven Composite Longbow, 50, 80, 200, Wood",
+    "Crossbow, 60, 100, 250, Wood",
+    "Composite Bow, 70, 110, 350, Wood",
+    "Heavy Crossbow, 80, 120, 450, Wood",
+    "Repeating Crossbow, 90, 130, 550, Wood",
+    "Yumi, 90, 130, 550, Wood"
+  ],
+  Inscribe: [
+    "Make any Circle 1 scrolls, 0, 25, 100",
+    "Make any Circle 2 scrolls, 0, 39.2, 150",
+    "Make any Circle 3 scrolls, 3.5, 53.5, 200",
+    "Make any Circle 4 scrolls, 17.8, 67.8, 250",
+    "Make any Circle 5 scrolls, 32.1, 82.1, 300",
+    "Make any Circle 6 scrolls, 46.4, 96.4, 350",
+    "Make any Circle 7 scrolls, 60.7, 110.7, 400",
+    "Make any Circle 8 scrolls, 75, 125, 500"
+  ],
+  Carpentry: [
+    "Barrel Staves, 0, 25, 100",
+    "Barrel Lid, 11, 36, 120",
+    "Foot Stool, 11, 36, 120",
+    "Bamboo Chair, 21, 46, 180",
+    "Ten Foot Pole, 43.6, 125, 300, Wood",
+    "Club, 14.5, 64.5, 150, Wood",
+    "Wooden shields, 52.6, 77.6, 400, Wood",
+    "Fukiya, 60, 85, 480",
+    "Bokuto, 70, 95, 510, Wood",
+    "Quarter Staff, 73.6, 98.6, 520, Wood",
+    "Druid Staff, 78.9, 103.9, 550, Wood",
+    "Tetsubo, 80, 140.3, 650, Wood"
+  ],
+  Cooking: [
+    "Meals, 0, 125, 300"
+  ]
+  // "Item, minSkill, maxSkill, rewardXp, ResourceType"
+  // "Item, minSkill, maxSkill, rewardXp, ResourceType, countMin, countMax"
+};
+
+function parseResourceLine(line){
+  const parts=String(line).split(",").map(s=>s.trim());
+  if(parts.length<3) return null;
+  return {
+    name: parts[0],
+    minSkill: parseFloat(parts[1])||0,
+    bonusPercent: parseFloat(parts[2])||0
+  };
+}
+function resourcesForType(type){
+  if(!type) return [];
+  const key=Object.keys(CRAFT_RESOURCES||{}).find(k=>k.toLowerCase()===String(type).toLowerCase());
+  if(!key) return [];
+  return (CRAFT_RESOURCES[key]||[]).map(parseResourceLine).filter(Boolean);
+}
+/** Resources the player can use for this craft skill at their recorded skill value */
+function eligibleResources(resourceType, skillName){
+  const list=resourcesForType(resourceType);
+  if(!list.length) return [];
+  let sk = (typeof skillVal==="function") ? skillVal(skillName) : null;
+  if(sk==null) sk = 0; // no recorded value → only resources with minSkill 0
+  return list.filter(r=>sk >= r.minSkill);
+}
+function expandCraftQuests(){
+  const out=[];
+  const by=typeof CRAFT_BY_SKILL!=="undefined"?CRAFT_BY_SKILL:{};
+  Object.keys(by).forEach(skill=>{
+    (by[skill]||[]).forEach(line=>{
+      if(!line||!String(line).trim()) return;
+      const parts=String(line).split(",").map(s=>s.trim());
+      if(parts.length<4) return;
+      const name=parts[0];
+      const minSkill=parseFloat(parts[1]);
+      const maxSkill=parseFloat(parts[2]);
+      const rewardXp=parseFloat(parts[3]);
+      // parts[4] may be resource type (non-numeric) OR countMin (legacy)
+      let resourceType="", countMin=CRAFT_COUNT_DEFAULT.countMin||10, countMax=CRAFT_COUNT_DEFAULT.countMax||40;
+      if(parts[4]!=null && parts[4]!==""){
+        if(/^[0-9.]+$/.test(parts[4])){
+          countMin=parseInt(parts[4],10);
+          if(parts[5]!=null&&parts[5]!=="") countMax=parseInt(parts[5],10);
+        } else {
+          resourceType=parts[4];
+          if(parts[5]!=null&&parts[5]!=="") countMin=parseInt(parts[5],10);
+          if(parts[6]!=null&&parts[6]!=="") countMax=parseInt(parts[6],10);
+        }
+      }
+      const id="craft_"+name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+      const verb = skill==="Cooking" ? "Cook" : "Craft";
+      out.push({
+        id,
+        title: verb+" {x} "+name,
+        description: verb+" "+name+" until the count is met.",
+        countMin: Math.max(1, countMin||10),
+        countMax: Math.max(countMin||10, countMax||40),
+        rewardXp: isNaN(rewardXp)?0:rewardXp,
+        requires: [skill],
+        minSkill: isNaN(minSkill)?0:minSkill,
+        maxSkill: isNaN(maxSkill)?125:maxSkill,
+        resourceType: resourceType||""
+      });
+    });
+  });
+  return out;
+}
+const CRAFT_QUESTS = expandCraftQuests();
 
 const NPC_QUESTS = [
   { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 1000, minLevel: 1, requiresPrestige: false },
@@ -3731,8 +3984,15 @@ function buildQuestPool(){
       minLevel:c.minLevel, maxLevel:c.maxLevel,
       minSkill:c.minSkill, maxSkill:c.maxSkill,
       reward:{ kind:"xp", value:c.rewardXp||0 },
-      requires:c.requires?[...c.requires]:[]
+      requires:c.requires?[...c.requires]:[],
+      resourceType:c.resourceType||""
     };
+    // If recipe needs a resource type, player must qualify for at least one tier
+    if(def.resourceType){
+      const skillName=(def.requires&&def.requires[0])||"";
+      const elig=eligibleResources(def.resourceType, skillName);
+      if(!elig.length) return; // skip — no usable resource at current skill value
+    }
     if(questEligible(def)) pool.push(def);
   });
   (typeof NPC_QUESTS!=="undefined"?NPC_QUESTS:[]).forEach(n=>{
@@ -3750,16 +4010,54 @@ function buildQuestPool(){
 }
 function makeQuestInstance(def){
   const count=def.type==="npc" ? 1 : rollQuestCount(def);
+  let reward=def.reward?{...def.reward}: {kind:"xp", value:0};
+  let resourceName="", resourceBonusPct=0;
+  // Crafting only: total = base + ceil(base * (count% + resourceBonus%) / 100)
+  if(def.type==="craft" && reward.kind==="xp"){
+    const base=Number(reward.value)||0;
+    const countPct=count; // 22 count → +22%
+    const skillName=(def.requires&&def.requires[0])||"";
+    if(def.resourceType){
+      const elig=eligibleResources(def.resourceType, skillName);
+      if(elig.length){
+        // Prefer a random eligible resource (higher tiers only if skill allows)
+        const pick=elig[Math.floor(Math.random()*elig.length)];
+        resourceName=pick.name;
+        resourceBonusPct=Number(pick.bonusPercent)||0;
+      }
+    }
+    const totalPct = countPct + resourceBonusPct;
+    const bonus=Math.ceil(base * (totalPct/100));
+    const countBonus=Math.ceil(base * (countPct/100));
+    const resBonus=Math.ceil(base * (resourceBonusPct/100));
+    reward={
+      kind:"xp",
+      value: base+bonus,
+      baseXp: base,
+      countBonus,
+      resourceBonus: resBonus,
+      resourceBonusPct,
+      count,
+      totalPct
+    };
+  }
+  let title=(def.title||"").replace(/\{x\}/gi, String(count));
+  let description=def.description||"";
+  if(resourceName){
+    title = title + " ("+resourceName+")";
+    description = description + " Use "+resourceName+".";
+  }
   return {
     defId: def.id,
     type: def.type,
     _src: def._src,
-    title: (def.title||"").replace(/\{x\}/gi, String(count)),
-    description: def.description||"",
+    title,
+    description,
     count,
-    reward: def.reward?{...def.reward}: {kind:"xp", value:0},
+    reward,
+    resourceName,
+    resourceType: def.resourceType||"",
     requires: def.requires?[...def.requires]:[],
-    // kill quest progress tracking (avoid double-dip)
     killsLogged: 0,
     sessionXp: 0,
     totalQuestXp: 0
@@ -3930,9 +4228,18 @@ function renderQuestLog(){
     : `Chain <strong>${streak}</strong> / ${QUEST_CHAIN_BONUS_AT} — bonus on the ${QUEST_CHAIN_BONUS_AT}th, then resets`;
   if(state.questChoices&&state.questChoices.length){
     body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose your burden:</p>`+
-      state.questChoices.map((q,i)=>`<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
-        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":"Slaying")} · ${(q.description||"").slice(0,80)}</span>
-      </button>`).join("")+
+      state.questChoices.map((q,i)=>{
+        let extra="";
+        if(q.type==="craft"&&q.reward&&q.reward.baseXp!=null){
+          const rn=q.resourceName?` · ${q.resourceName}`:"";
+          extra=` · ~${q.reward.value} XP (${q.reward.baseXp}+${q.reward.countBonus} count`+(q.reward.resourceBonus?`+${q.reward.resourceBonus} mat`:``)+`)`+rn;
+        } else if(q.reward&&q.reward.kind==="xp"){
+          extra=` · ${q.reward.value} XP`;
+        }
+        return `<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
+        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":"Slaying")}${extra}</span>
+      </button>`;
+      }).join("")+
       `<div class="ql-actions" style="margin-top:.5rem"><button class="ql-skip" id="questSkipBtn">Skip Offers</button></div>
       <div class="ql-chain">${chainNote}</div>`;
     body.querySelectorAll("[data-qpick]").forEach(b=>b.onclick=()=>acceptQuestChoice(+b.dataset.qpick));
@@ -3948,9 +4255,15 @@ function renderQuestLog(){
   const type=q.type==="craft"?"craft":(q.type==="npc"?"npc":"kill");
   let rewardLine="";
   if(q.reward.kind==="xp"){
-    const base=q.reward.value||0;
+    const total=q.reward.value||0;
     const mult=chainMultiplier();
-    rewardLine=`Reward: <strong>${Math.ceil(base*mult)} XP</strong>`+(mult>1?` (base ${base} × chain)`:"");
+    if(q.type==="craft" && q.reward.baseXp!=null){
+      const b=q.reward.baseXp, cb=q.reward.countBonus||0, rb=q.reward.resourceBonus||0;
+      const res=q.resourceName?` + ${rb} ${q.resourceName}`:"";
+      rewardLine=`Reward: <strong>${Math.ceil(total*mult)} XP</strong> <span style="color:#8a7f6a">(${b} base + ${cb} count${res}`+(mult>1?` × chain`:``)+`)</span>`;
+    } else {
+      rewardLine=`Reward: <strong>${Math.ceil(total*mult)} XP</strong>`+(mult>1?` (base ${total} × chain)`:"");
+    }
   } else if(q.reward.kind==="xp_pct"){
     const pct=Math.round((q.reward.value||0)*100);
     rewardLine=`Reward: <strong>XP you enter</strong> + <strong>${pct}%</strong> bonus`+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
