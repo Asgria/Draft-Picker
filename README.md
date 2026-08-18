@@ -27,3 +27,18 @@ if you chose it as well item drafts
 
 after completing the selection you will receive another pop up, this is also a open-source code it is ran in the tazuo client and can be copypasted
 <img width="590" height="499" alt="xptrackerlink" src="https://github.com/user-attachments/assets/c036d1f9-72d2-4108-b3ad-72755263eea7"/>
+
+click here in tazuo client
+<img width="1143" height="157" alt="barforlegion" src="https://github.com/user-attachments/assets/ea48a708-561c-4301-b85d-9b28977fd0bc" />
+a new ui will pop up click here
+<img width="385" height="445" alt="click new script" src="https://github.com/user-attachments/assets/7130a088-4d14-4844-9cf2-ab60a6e24d95" />
+Name the script to whatever you want, just make sure .py is at the end of the file name as shown inpicture
+<img width="444" height="469" alt="namedoesntmatter" src="https://github.com/user-attachments/assets/33286ed8-fb56-4de9-8efb-153c6a403b6b" />
+now click here
+<img width="518" height="472" alt="clickplussign" src="https://github.com/user-attachments/assets/e337d68d-830e-46a9-8713-c77071776cb1" />
+Delete anything in the text box and copy paste the code into there
+(right click in the github file, right click select all, ingame and hold down ctrl and hit the letter v to paste it in.)
+<img width="1016" height="573" alt="copycode in here" src="https://github.com/user-attachments/assets/027a86e2-a946-4072-9b52-7429d4e52af4" />
+
+you will now have a new ui element
+<img width="352" height="315" alt="newuielement" src="https://github.com/user-attachments/assets/67223543-ed0c-4b59-a5f2-220924681f89" />
