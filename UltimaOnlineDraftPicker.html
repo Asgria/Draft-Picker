@@ -16,7 +16,9 @@
       pointer-events:none;
       max-height:calc(100vh - 32px); overflow-y:auto;
     }
-    .quest-rail .quest-log{pointer-events:auto}
+    .quest-rail .quest-log,
+    .quest-rail #questBtn,
+    .quest-rail .seek-task-btn{pointer-events:auto}
     @media (max-width: 960px){
       .quest-rail{
         position:static; width:100%; max-width:700px;
@@ -46,11 +48,12 @@
     .quest-log .ql-skip{background:#2d2d38;color:#ccc;border:1px solid #3d3d4a}
     .quest-log .ql-chain{margin-top:.85rem;padding-top:.7rem;border-top:1px solid #2a2a35;font-size:.78rem;color:#888;font-family:system-ui,sans-serif}
     .quest-log .ql-xp{width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem .55rem;border-radius:8px;font-size:.85rem;margin-bottom:.5rem;font-family:system-ui,sans-serif}
-    #questBtn{background:#8e6b2a;color:#f5e6c8;border:1px solid #c9a227}
-    #questBtn:hover:not(:disabled){background:#a47c30}
-    #questBtn.cooldown{background:#2d2d38;color:#aaa;border-color:#444;min-width:140px;justify-content:center}
-    #questBtn.show{display:inline-flex}
+    #questBtn, .seek-task-btn{background:#8e6b2a;color:#f5e6c8;border:1px solid #c9a227;width:100%;justify-content:center;padding:.65rem .75rem;border-radius:10px;font-weight:700;font-family:system-ui,sans-serif;font-size:.9rem;cursor:pointer;margin-bottom:.65rem}
+    #questBtn:hover:not(:disabled), .seek-task-btn:hover:not(:disabled){background:#a47c30}
+    #questBtn.cooldown{background:#2d2d38;color:#aaa;border-color:#444}
+    #questBtn.show{display:flex}
     #questBtn{display:none}
+    /* quest-rail position fixed is defined above */
 
     .landing{
       position:fixed;inset:0;z-index:200;background:radial-gradient(ellipse at 50% 20%,#1a1a28 0%,#0f0f13 55%,#0a0a0e 100%);
@@ -168,7 +171,7 @@
     .mod-row input[type=checkbox]{margin-top:.2rem;width:16px;height:16px;accent-color:#6c5ce7}
     .mod-row input[type=number]{width:70px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.3rem .45rem;border-radius:6px;font-size:.85rem}
     .mod-row .sub{font-size:.78rem;color:#666;margin-top:.15rem}
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:320;padding:1rem}
     .modal-overlay.open{display:flex}
     .modal{background:#1c1c24;border:1px solid #3d3d4a;border-radius:16px;width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
     .modal header{padding:1rem 1.15rem;border-bottom:1px solid #2a2a35;font-weight:600;font-size:1.05rem}
@@ -224,10 +227,8 @@
     <button id="generateItem" title="Spend 1 Item charge (or buy one with 500 coins)" style="display:none">Generate 3 Items</button>
     <button id="startItemsBtn" title="One-time starter item roll (prefers weapons for your combat skills)" style="display:none;background:#6c3483;color:#fff">Starter Items</button>
     <button id="buyItemChargeBtn" title="Spend 500 coins for +1 Item Generate charge (not skill charges)" style="display:none;background:#b7950b;color:#1a1a2e">Buy Item Charge (500)</button>
-    <button id="questBtn" title="Roll a quest for extra XP/rewards (no Generate charge). Cooldown applies after claim/skip.">Generate Quest</button>
     <button id="buyProfBtn" title="Spend 10,000 coins for a permanent extra profession skill" style="display:none;background:#b7950b;color:#1a1a2e">Buy Profession (10k)</button>
-    <button id="skillValuesBtn" title="Record skill totals (0–125.0) for craft quest gates" style="background:#6c5ce7;color:#fff">Skill Values</button>
-    <button id="modBtn" title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
+    <button id="modBtn" data-challenge-lock title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
     <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
     <button id="homeBtnTop" title="Return to character select landing" style="background:#2d2d38;color:#ccc;border:1px solid #3d3d4a">Characters</button>
     <button id="githubBtn" title="Python XP / avatar coin tracker for in-game use">XP Tracker Script</button>
@@ -284,29 +285,46 @@
   <div class="panel" id="toolsPanel">
     <h2>Tools</h2>
     <p class="hint">Named saves are stored in this browser (localStorage). Export writes a JSON file you choose (Chrome/Edge can overwrite). Import only updates the active save.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-      <button id="manualPick" style="background:#e17055;color:#fff;" title="Manually add any available skill to your draft">Manual Skill</button>
-      <button id="manualItemBtn" style="background:#8e44ad;color:#fff;display:none" title="Manually add an item from the current item pool">Manual Item</button>
-      <button id="banBtn" style="background:#636e72;color:#fff;" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
-      <button id="banStarterBtn" style="background:#4a5568;color:#fff;" title="Quick-ban skills so they never appear in Starter Draft">Ban from Starter</button>
-      <button id="editBtn" style="background:#636e72;color:#fff;" title="Manually set charges, level, XP, rerolls, prestige">Edit Values</button>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;" id="toolsBtnRow">
+      <button id="manualPick" data-challenge-lock style="background:#e17055;color:#fff;" title="Manually add any available skill to your draft">Manual Skill</button>
+      <button id="manualItemBtn" data-challenge-lock style="background:#8e44ad;color:#fff;display:none" title="Manually add an item from the current item pool">Manual Item</button>
+      <button id="banBtn" data-challenge-lock style="background:#636e72;color:#fff;" title="Ban cards from all rolls, Starter only, or Generate only">Ban Cards</button>
+      <button id="banStarterBtn" data-challenge-lock style="background:#4a5568;color:#fff;" title="Quick-ban skills so they never appear in Starter Draft">Ban from Starter</button>
+      <button id="editBtn" data-challenge-lock style="background:#636e72;color:#fff;" title="Manually set charges, level, XP, rerolls, prestige">Edit Values</button>
       <button id="customBtn" style="background:#a29bfe;color:#1a1a2e;" title="One-off random pick from a temporary list">Custom Random</button>
-      <button id="resetQuestCd" style="background:#8e6b2a;color:#f5e6c8;" title="Clear the quest generate cooldown timer">Reset Quest Cooldown</button>
+      <button id="resetQuestCd" data-challenge-lock style="background:#8e6b2a;color:#f5e6c8;" title="Clear the task seek cooldown timer">Reset Task Cooldown</button>
       <button id="reset" style="background:#5c2a2a;color:#f88;border:1px solid #833;" title="Wipe the CURRENT save slot only back to defaults">Full Reset (this save)</button>
-      <button id="genChallengeBtn" style="background:#c9a227;color:#1a1a2e;" title="Build a shareable challenge code from current modifiers + skill bans">Generate Challenge Code</button>
+      <button id="genChallengeBtn" data-challenge-lock style="background:#c9a227;color:#1a1a2e;" title="Build a shareable challenge code from current modifiers + skill bans">Generate Challenge Code</button>
     </div>
+    <p id="challengeToolsNote" style="display:none;font-size:.78rem;color:#888;margin-top:.55rem">Challenge mode: Tools locked. Full Reset &amp; Custom Random only.</p>
   </div>
 
   <div class="panel" id="historyPanel">
     <h2>Action History <span style="color:#666;font-weight:400;font-size:.85rem">(last 20)</span></h2>
     <div id="historyList" style="font-size:.8rem;color:#999;max-height:200px;overflow-y:auto;line-height:1.55"></div>
+    <div id="challengeCodeShare" style="display:none;margin-top:.85rem;padding-top:.75rem;border-top:1px solid #2a2a35">
+      <div style="font-size:.78rem;color:#c9a227;font-weight:700;margin-bottom:.35rem;letter-spacing:.04em">CHALLENGE CODE</div>
+      <p style="font-size:.75rem;color:#888;margin:0 0 .4rem">Share so others can run the same challenge.</p>
+      <input type="text" id="challengeCodeDisplay" readonly style="width:100%;background:#0d0d12;border:1px solid #c9a227;color:#58a6ff;padding:.5rem .6rem;border-radius:8px;font-size:.85rem;margin-bottom:.4rem">
+      <button type="button" id="challengeCodeCopy" style="background:#238636;color:#fff;border:none;padding:.4rem .75rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:.8rem">Copy code</button>
+      <div id="challengeBleekPatch" style="display:none;margin-top:.75rem;padding-top:.65rem;border-top:1px dashed #333">
+        <div style="font-size:.75rem;color:#f88;margin-bottom:.35rem">Bleek — patch challenge mid-run (keeps progress)</div>
+        <input type="text" id="challengePatchInput" placeholder="Paste updated challenge code" style="width:100%;background:#1c1c24;border:1px solid #833;color:#e8e8ed;padding:.45rem .55rem;border-radius:8px;font-size:.82rem;margin-bottom:.4rem">
+        <button type="button" id="challengePatchBtn" style="background:#833;color:#f88;border:1px solid #a44;padding:.4rem .75rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:.8rem">Apply patch</button>
+      </div>
+    </div>
   </div>
 </div><!-- /main-col -->
 
   <aside class="quest-rail" id="questRail" style="display:none">
+    <button type="button" id="questBtn" class="seek-task-btn" title="Draw a task for extra XP and coin. Costs no draft charges. A cooldown begins after you finish or abandon a task.">Seek a Task</button>
     <div class="quest-log" id="questLog">
-      <h2>Quest Log</h2>
-      <div id="questLogBody"><p class="ql-empty">No active quest. Enable Quests in Modifiers, then use Generate Quest.</p></div>
+      <h2>Chronicle of Tasks</h2>
+      <div id="questLogBody"><p class="ql-empty">No task binds you. Seek a Task when the road calls.</p></div>
+      <div class="ql-extra-btns" id="questExtraBtns" style="margin-top:.85rem;padding-top:.75rem;border-top:1px solid #3d3420;display:flex;flex-direction:column;gap:.45rem">
+        <button type="button" id="questBoardBtn" title="Gaze upon every bounty you are fit to claim — by level, skills, and recorded craft values. This only surveys the board; it does not bind you to a task." style="width:100%;background:#252530;color:#f5e6c8;border:1px solid #3d3420;padding:.55rem .75rem;border-radius:8px;font-weight:700;font-family:system-ui,sans-serif;cursor:pointer;font-size:.85rem">Bounty Board</button>
+        <button type="button" id="questCraftSkillsBtn" title="Inscribe your true craft and gathering skill totals (0–125.0). These marks decide which work is fit for your hands. Save All to seal them." style="width:100%;background:#3d3420;color:#f5e6c8;border:1px solid #c9a227;padding:.55rem .75rem;border-radius:8px;font-weight:700;font-family:system-ui,sans-serif;cursor:pointer;font-size:.85rem">Craft Skill Values</button>
+      </div>
     </div>
   </aside>
 </div><!-- /app-shell -->
@@ -339,25 +357,39 @@
       <input type="number" id="editPrestige" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Starter rerolls used</strong>
       <input type="number" id="editStarterUses" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
-    <div class="mod-row"><div style="flex:1"><strong>Golden card chance</strong><div class="sub">0–1 (default 0.15). Pack goldens &amp; free-pick goldens.</div>
+    <div class="mod-row"><div style="flex:1"><strong>Golden card chance</strong><div class="sub">0–1 (default 0.15). At 1.0 every Generate roll includes a golden card. Unpacked = whole-pack unlock · Packed = golden Free Pick (2 picks) · Skills = golden Free Pick.</div>
       <input type="number" id="editGoldenChance" min="0" max="1" step="0.01" value="0.15" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Free Pick chance</strong><div class="sub">0–1 (default 0.15). Chance Free Pick appears on skill/item rolls.</div>
       <input type="number" id="editFreePickChance" min="0" max="1" step="0.01" value="0.15" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Smart prereq boost</strong><div class="sub">0–1 (default 0.20). Chance a draft includes a skill unlocked by a prereq you already own.</div>
+      <input type="number" id="editSmartPrereq" min="0" max="1" step="0.01" value="0.20" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Weighted prereq appear chance</strong><div class="sub">0–1 (default 0.15). Base chance gated skills enter the roll pool.</div>
+      <input type="number" id="editWeightedChance" min="0" max="1" step="0.01" value="0.15" style="margin-top:.35rem;width:100%"></div></div>
     <button id="editApply" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-top:.5rem;">Apply Changes</button>
   </div><footer><button id="editClose">Close</button></footer></div></div>
 
   <div class="modal-overlay" id="pickModal"><div class="modal"><header id="modalTitle">Choose</header><div class="body"><div class="list" id="pickList"></div></div><footer><button id="cancelPick">Cancel</button></footer></div></div>
 
   
-  <div class="modal-overlay" id="skillValuesModal"><div class="modal"><header>Skill Values (0 – 125.0)</header><div class="body">
-    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Record real skill totals for craft quest gates. Decimals matter (e.g. 55.4). Cleared on Death Reset.</p>
-    <div id="skillValuesList" style="display:flex;flex-direction:column;gap:.35rem;max-height:220px;overflow-y:auto;margin-bottom:.5rem"></div>
-    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-      <select id="skillValueSelect" style="background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px;flex:1;min-width:120px"></select>
-      <input type="number" id="skillValueInput" min="0" max="125" step="0.1" placeholder="55.4" style="width:90px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.4rem;border-radius:8px">
-      <button type="button" id="skillValueSave" style="background:#6c5ce7;color:#fff">Save Skill</button>
-    </div>
-  </div><footer><button id="skillValuesClose">Close</button></footer></div></div>
+  <div class="modal-overlay" id="skillValuesModal"><div class="modal" style="max-width:420px"><header>Craft Skill Values</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Record in-game totals (0–125.0) for quest gates. Only drafted skills appear. Edit freely, then <strong>Save All</strong> — nothing applies until you save. Cleared on Death Reset.</p>
+    <div id="skillValuesList" style="display:flex;flex-direction:column;gap:.4rem;max-height:340px;overflow-y:auto;margin-bottom:.75rem"></div>
+  </div><footer style="display:flex;gap:.5rem;justify-content:flex-end">
+    <button id="skillValuesClose" type="button">Cancel</button>
+    <button id="skillValuesSaveAll" type="button" style="background:#c9a227;color:#1a1a2e;border:none;padding:.5rem 1rem;border-radius:8px;font-weight:700;cursor:pointer">Save All</button>
+  </footer></div></div>
+  <div class="modal-overlay" id="challengePlayerModal"><div class="modal" style="max-width:460px"><header>Update Challenge Code</header><div class="body">
+    <p style="font-size:.85rem;color:#aaa;margin-bottom:.65rem;line-height:1.45">Paste a new challenge code from the host. Your level, XP, and drafts stay — only the challenge rules update.</p>
+    <input type="text" id="challengePlayerInput" placeholder="Paste challenge code" style="width:100%;background:#1c1c24;border:1px solid #c9a227;color:#e8e8ed;padding:.55rem .65rem;border-radius:8px;font-size:.9rem;margin-bottom:.55rem">
+    <p id="challengePlayerMsg" style="font-size:.8rem;color:#888;min-height:1.2em"></p>
+  </div><footer style="display:flex;gap:.5rem;justify-content:flex-end">
+    <button type="button" id="challengePlayerClose">Cancel</button>
+    <button type="button" id="challengePlayerApply" style="background:#c9a227;color:#1a1a2e;border:none;padding:.5rem 1rem;border-radius:8px;font-weight:700;cursor:pointer">Apply code</button>
+  </footer></div></div>
+  <div class="modal-overlay" id="questBoardModal"><div class="modal" style="max-width:520px"><header>Bounty Board</header><div class="body">
+    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Bounties fit for your rank and craft. Survey only — press <strong>Seek a Task</strong> to take one upon yourself.</p>
+    <div id="questBoardList" style="display:flex;flex-direction:column;gap:.5rem;max-height:420px;overflow-y:auto"></div>
+  </div><footer><button id="questBoardClose" type="button">Close</button></footer></div></div>
 
   <div class="modal-overlay" id="banModal"><div class="modal"><header>Ban Cards</header><div class="body">
     <p style="font-size:.82rem;color:#888;margin-bottom:.7rem">Full = never appears · Starter only = hidden from Starter Draft · Generate only = hidden from Generate 3. ✕ to unban. Use “Ban from Starter” in Tools for a quick starter ban.</p>
@@ -407,8 +439,10 @@
       </select></div></div>
     <div class="mod-row"><input type="checkbox" id="modDraftReroll"><div><strong>Reroll drafted items</strong><div class="sub">On item chips only: spend 1 prestige reroll token to return that item to the pool and gain +1 Generate charge (skills stay locked).</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modQuests"><div><strong>Enable Quests</strong><div class="sub">Shows Generate Quest — does not use Generate charges</div></div></div>
-    <div class="mod-row"><div style="flex:1"><strong>Quest cooldown (minutes)</strong><div class="sub">Default 60 (1 hour) between generating quests</div>
-      <input type="number" id="modQuestCd" min="1" value="60" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Task cooldown (minutes)</strong><div class="sub">Default 60. Use 0 for no rest between completed tasks.</div>
+      <input type="number" id="modQuestCd" min="0" value="60" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><input type="checkbox" id="modSkipPenalty"><div><strong>Skip penalty cooldown</strong><div class="sub">Abandoning a task forces a rest (default 15 min), even if normal cooldown is 0.</div>
+      <input type="number" id="modSkipPenaltyMin" min="1" value="15" style="margin-top:.35rem;width:100%" title="Minutes forced on skip"> minutes on skip</div></div>
     <p style="font-size:.8rem;color:#888;margin:1rem 0 .5rem">Apply / Refresh saves modifiers and rebuilds the item pool from packs. Charge refresh only tops up if new rules would grant more (won’t wipe extras you set in Edit).</p>
     <button id="modRefresh" class="primary" style="background:#6c5ce7;color:#fff;width:100%;justify-content:center;margin-bottom:.5rem">Apply / Refresh Rules</button>
   </div><footer><button id="modClose">Close</button></footer></div></div>
@@ -441,7 +475,22 @@
       <button type="button" class="landing-slot" id="rsPickMondain" style="cursor:pointer;text-align:left;width:100%;border:1px solid #3d3420;background:#1a1814;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
         <strong style="color:#c9a227">Kenzard's Mondain Madness</strong>
         <div class="meta" style="margin-top:.25rem;color:#b8a88a">The Madness of Mondain has spread to you</div>
-        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">Unlimited starter skill rerolls · generate charge every 2 levels · ignore all skill prerequisites</div>
+        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">Unlimited starter skill rerolls · generate charge every 2 levels · ignore all skill prerequisites. The original concept for this draft mode.</div>
+      </button>
+      <button type="button" class="landing-slot" id="rsPickSora" style="cursor:pointer;text-align:left;width:100%;border:1px solid #5a2a4a;background:#1a1218;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
+        <strong style="color:#e84393">Sora's Fisting Adventurer</strong>
+        <div class="meta" style="margin-top:.25rem;color:#c48aab">Sora loves fisting things so much</div>
+        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">10 starter rerolls · charge every 4 levels · ignore prereqs · unpacked items · FistFighting + Marksmanship · Pugilist &amp; Throwing Gloves starters · most weapons banned</div>
+      </button>
+      <button type="button" class="landing-slot" id="rsPickTsai" style="cursor:pointer;text-align:left;width:100%;border:1px solid #2a4a5a;background:#12181a;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
+        <strong style="color:#74b9ff">Tsai's Aint nobody got time for that</strong>
+        <div class="meta" style="margin-top:.25rem;color:#8ab4c4">Tsai's famous quote</div>
+        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">Generate a charge every level · generate a reroll every level (rerolls only for draft skill picks, not undoing drafted cards)</div>
+      </button>
+      <button type="button" class="landing-slot" id="rsPickQuesting" style="cursor:pointer;text-align:left;width:100%;border:1px solid #3d3420;background:#14120e;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
+        <strong style="color:#f1c40f">Questing Only</strong>
+        <div class="meta" style="margin-top:.25rem;color:#c9a227">GIVE ME A QUEST!</div>
+        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">XP only from tasks — no AFK macros or random kills. Charge every 2 levels · 10 starter rerolls · 0 task cooldown.</div>
       </button>
     </div>
     <!-- Custom editor -->
@@ -489,7 +538,14 @@
             <div class="sub">Kill, craft, and NPC tribute quests based on drafted skills</div>
           </div>
         </div>
-        <div class="mod-row">
+                <div class="mod-row">
+          <input type="checkbox" id="rsSkipPenalty">
+          <div><strong>Skip penalty cooldown</strong>
+            <div class="sub">Abandoning a task forces a rest (minutes below), even if task cooldown is 0</div>
+            <input type="number" id="rsSkipPenaltyMin" min="1" value="15" style="margin-top:.3rem;width:100%;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.35rem;border-radius:8px">
+          </div>
+        </div>
+<div class="mod-row">
           <input type="checkbox" id="rsProfessions">
           <div><strong>Profession limit</strong>
             <div class="sub">Start with 1 gather + 1 craft every life. Enables coins for 10k extra profession slots.</div>
@@ -518,9 +574,17 @@
           </div>
         </div>
         <div style="border-top:1px solid #2a2a35;margin:1rem 0 .75rem;padding-top:.85rem">
-          <strong style="font-size:.9rem;color:#aaa">Starting skills (auto-grant)</strong>
-          <div class="sub" style="margin:.25rem 0 .45rem">These skills are always added on new save and after Death Reset (e.g. FistFighting for a themed run).</div>
-          <div id="rsAutoSkills" style="max-height:140px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;color:#aaa">
+            <input type="checkbox" id="rsAutoSkillsToggle">
+            <strong>Starting skills (auto-grant)</strong>
+          </label>
+          <div id="rsAutoSkillsWrap" style="display:none;margin-top:.45rem">
+            <div class="sub" style="margin:0 0 .45rem">Always added on new save, Death Reset, and Prestige.</div>
+            <div id="rsAutoSkills" style="max-height:140px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
+          </div>
+        </div>
+        <div style="margin:.5rem 0">
+          <button type="button" id="rsOpenEditValues" style="background:#636e72;color:#fff;border:none;padding:.5rem .85rem;border-radius:8px;cursor:pointer;font-weight:600">Edit Values…</button>
         </div>
         <div style="border-top:1px solid #2a2a35;margin:1rem 0 .75rem;padding-top:.85rem">
           <strong style="font-size:.9rem;color:#aaa">Custom values</strong>
@@ -570,12 +634,26 @@
   <footer><button type="button" class="primary" id="forceStarterGo">Start Draft</button></footer>
 </div></div>
 <div class="modal-overlay" id="genChallengeModal"><div class="modal" style="max-width:520px"><header>Generate Challenge Code</header><div class="body">
-    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Uses current Modifiers plus optional skill bans. Params (H/K/J) appear after a dash. Ban tokens use z + code (e.g. za1).</p>
+    <p style="font-size:.82rem;color:#888;margin-bottom:.65rem">Uses current Modifiers. Tokens: <code>z</code>=skill ban, <code>s</code>=start skill, <code>p</code>=pack ban, <code>i</code>=item ban. Params after dash: H/K/J.</p>
+    <div class="mod-row"><strong>Starting skills (auto-grant)</strong></div>
+    <div id="genChallengeAutoList" style="max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.65rem"></div>
     <div class="mod-row"><strong>Skill bans (full)</strong></div>
-    <div id="genChallengeBanList" style="max-height:180px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem"></div>
+    <div id="genChallengeBanList" style="max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.65rem"></div>
+    <div class="mod-row"><strong>Pack bans</strong> <span style="color:#666;font-size:.75rem">(packed mode pool names)</span></div>
+    <div id="genChallengePackBanList" style="max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.65rem"></div>
+    <div class="mod-row"><strong>Item bans</strong> <span style="color:#666;font-size:.75rem">(individual / unpacked / loose)</span></div>
+    <div id="genChallengeItemBanList" style="max-height:140px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.65rem"></div>
+    <div class="mod-row"><strong>Starter item allow-list</strong> <span style="color:#666;font-size:.75rem">(if any checked, Starter Items only rolls these)</span></div>
+    <div id="genChallengeStarterItemList" style="max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.65rem"></div>
     <div class="mod-row"><div style="flex:1"><strong>Interval H</strong> <input type="number" id="gcInterval" min="1" placeholder="auto" style="width:80px"></div>
       <div style="flex:1"><strong>Charges K</strong> <input type="number" id="gcCharges" min="1" value="1" style="width:80px"></div>
       <div style="flex:1"><strong>Max J</strong> <input type="number" id="gcMax" min="2" value="100" style="width:80px"></div>
+    </div>
+    <div class="mod-row" style="flex-wrap:wrap;gap:.5rem">
+      <div><strong>Golden</strong> <input type="number" id="gcGolden" min="0" max="1" step="0.01" value="0.15" style="width:70px"></div>
+      <div><strong>Free Pick</strong> <input type="number" id="gcFreePick" min="0" max="1" step="0.01" value="0.15" style="width:70px"></div>
+      <div><strong>Smart prereq</strong> <input type="number" id="gcSmart" min="0" max="1" step="0.01" value="0.20" style="width:70px"></div>
+      <div><strong>Weighted</strong> <input type="number" id="gcWeighted" min="0" max="1" step="0.01" value="0.15" style="width:70px"></div>
     </div>
     <button type="button" id="gcBuildBtn" style="background:#c9a227;color:#1a1a2e;width:100%;justify-content:center;margin:.5rem 0">Build code</button>
     <input type="text" id="gcOutput" readonly style="width:100%;background:#0d0d12;border:1px solid #333;color:#58a6ff;padding:.55rem;border-radius:8px;font-size:.9rem">
@@ -671,7 +749,10 @@ const RULESET_PRESETS = {
   mondain: {
     name: "Kenzard's Mondain Madness",
     description: "The Madness of Mondain has spread to you",
+    blurb: "Unlimited starter skill rerolls · generate charge every 2 levels · ignore all skill prerequisites. The original concept for this draft mode.",
     autoSkills: [],
+    bans: {},
+    starterItemAllow: [],
     mods: {
       ignorePrereqs: true,
       customInterval: true,
@@ -691,11 +772,116 @@ const RULESET_PRESETS = {
       gatherSkill: "Mining",
       craftSkill: "Blacksmith",
       goldenChance: 0.15,
-      freePickChance: 0.15
+      freePickChance: 0.15,
+      rerollEveryLevel: false
+    }
+  },
+  sora: {
+    name: "Sora's Fisting Adventurer",
+    description: "Sora loves fisting things so much",
+    blurb: "10 starter skill rerolls · charge every 4 levels · ignore prereqs · unpacked items · starts with FistFighting & Marksmanship · starter items: Pugilist Gloves & Throwing Gloves · combat skills/packs banned · Harpoon, Wizard Staff, Sceptre still rollable.",
+    autoSkills: ["FistFighting", "Marksmanship"],
+    bans: {
+      "Swords": "full",
+      "Bludgeoning": "full",
+      "Fencing": "full",
+      "Magery": "full",
+      "Elementalism": "full",
+      "Taming": "full",
+      "All Swords": "full",
+      "All Staves": "full",
+      "All Oriental Weapons": "full",
+      "All Maces": "full",
+      "All Fencing": "full",
+      "All Bows": "full",
+      "All Axes": "full"
+    },
+    starterItemAllow: ["Pugilist Gloves", "Throwing Gloves"],
+    mods: {
+      ignorePrereqs: true,
+      customInterval: false,
+      levelsPerCharge: 4,
+      chargesPerAward: 1,
+      maxLevel: 100,
+      starterLimitOn: true,
+      starterMax: 10,
+      itemDraft: true,
+      itemMode: "unpacked",
+      skillItems: false,
+      draftReroll: false,
+      questsEnabled: false,
+      questCooldownMinutes: 60,
+      goldItems: false,
+      professions: false,
+      gatherSkill: "Mining",
+      craftSkill: "Blacksmith",
+      goldenChance: 0.15,
+      freePickChance: 0.15,
+      rerollEveryLevel: false
+    }
+  },
+  tsai: {
+    name: "Tsai's Aint nobody got time for that",
+    description: "Tsai's famous quote",
+    blurb: "Generate a charge every level · generate a reroll every level. Note: rerolls are only used when picking draft skills, not for undoing skills you already have.",
+    autoSkills: [],
+    bans: {},
+    starterItemAllow: [],
+    mods: {
+      ignorePrereqs: false,
+      customInterval: true,
+      levelsPerCharge: 1,
+      chargesPerAward: 1,
+      maxLevel: 100,
+      starterLimitOn: false,
+      starterMax: null,
+      itemDraft: false,
+      itemMode: "packed",
+      skillItems: false,
+      draftReroll: false,
+      questsEnabled: false,
+      questCooldownMinutes: 60,
+      goldItems: false,
+      professions: false,
+      gatherSkill: "Mining",
+      craftSkill: "Blacksmith",
+      goldenChance: 0.15,
+      freePickChance: 0.15,
+      rerollEveryLevel: true
+    }
+  },
+  questing: {
+    name: "Questing Only",
+    description: "GIVE ME A QUEST!",
+    blurb: "You can only gain XP by doing quests — no random killing. You are looking for a purpose! Tasks at all times; no AFK macroing, no random craft/gather/kill. Charge every 2 levels · 10 starter rerolls · task cooldown 0.",
+    autoSkills: [],
+    bans: {},
+    starterItemAllow: [],
+    mods: {
+      ignorePrereqs: false,
+      customInterval: true,
+      levelsPerCharge: 2,
+      chargesPerAward: 1,
+      maxLevel: 100,
+      starterLimitOn: true,
+      starterMax: 10,
+      itemDraft: false,
+      itemMode: "packed",
+      skillItems: false,
+      draftReroll: false,
+      questsEnabled: true,
+      questCooldownMinutes: 0,
+      skipPenalty: true,
+      skipPenaltyMinutes: 15,
+      goldItems: false,
+      professions: false,
+      gatherSkill: "Mining",
+      craftSkill: "Blacksmith",
+      goldenChance: 0.15,
+      freePickChance: 0.15,
+      rerollEveryLevel: false
     }
   }
-  // Example future preset:
-  // fistStart: { name:"...", description:"...", autoSkills:["FistFighting"], mods:{...} }
 };
 const PREREQS = {
   "Blacksmith":["Mining"],"Tinkering":["Mining"],"Carpentry":["Lumberjacking"],"Bowcraft":["Lumberjacking"],
@@ -743,6 +929,16 @@ function defaultItemPool(mode){
   if(mode==="unpacked") return [...allUnpackedItems(), ...ITEM_LOOSE];
   return [...allPackedNames(), ...ITEM_LOOSE];
 }
+// Challenge codes for packs (p+2) and items (i+3) — built once from lists
+const PACK_BAN_CODES = (()=>{
+  const o={}; allPackedNames().forEach((p,i)=>{ o[p]=i.toString(36).padStart(2,"0"); }); return o;
+})();
+const PACK_CODE_TO_NAME = Object.fromEntries(Object.entries(PACK_BAN_CODES).map(([k,v])=>[v,k]));
+const ITEM_BAN_CODES = (()=>{
+  const o={}; const list=[...new Set([...allUnpackedItems(), ...ITEM_LOOSE])].sort((a,b)=>a.localeCompare(b));
+  list.forEach((it,i)=>{ o[it]=i.toString(36).padStart(3,"0"); }); return o;
+})();
+const ITEM_CODE_TO_NAME = Object.fromEntries(Object.entries(ITEM_BAN_CODES).map(([k,v])=>[v,k]));
 // ============================================================
 //  SKILL-UNLOCKED ITEMS — appear in item pool once skill is drafted
 //  Expand freely: skill name → list of item names
@@ -821,6 +1017,8 @@ function syncSkillItems(){
 }
 
 const CRAFT_SKILLS = ["Alchemy","Blacksmith","Bowcraft","Carpentry","Inscribe","Tailoring","Tinkering","Cooking"];
+// Skills that can record 0–125 values for quest gates (crafts + gathering)
+const QUEST_SKILL_TRACK = ["Alchemy","Blacksmith","Bowcraft","Carpentry","Inscribe","Tailoring","Tinkering","Cooking","Mining","Lumberjacking"];
 const GATHER_SKILLS = ["Mining","Lumberjacking"];
 const MISC_ALWAYS = ["Forensics"]; // always allowed under profession mode
 const ITEM_CHARGE_COST = 500;
@@ -950,15 +1148,24 @@ const cardsEl=$("cards"), toastEl=$("toast"), modal=$("pickModal");
 function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 function showToast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.classList.remove("show"),2400);}
 
+function normalizeChance(v, fallback){
+  if(v==null || v==="") return fallback;
+  let n = typeof v==="number" ? v : parseFloat(v);
+  if(isNaN(n)) return fallback;
+  if(n>1) n = n/100; // allow typing 100 for 100%
+  return Math.max(0, Math.min(1, n));
+}
 function goldenChance(){
-  const v = state.mods && state.mods.goldenChance;
-  if(typeof v==="number" && !isNaN(v)) return Math.max(0, Math.min(1, v));
-  return typeof GOLDEN_PACK_CHANCE!=="undefined" ? GOLDEN_PACK_CHANCE : 0.15;
+  return normalizeChance(state.mods && state.mods.goldenChance, typeof GOLDEN_PACK_CHANCE!=="undefined"?GOLDEN_PACK_CHANCE:0.15);
 }
 function freePickChance(){
-  const v = state.mods && state.mods.freePickChance;
-  if(typeof v==="number" && !isNaN(v)) return Math.max(0, Math.min(1, v));
-  return typeof FREE_PICK_CHANCE!=="undefined" ? FREE_PICK_CHANCE : 0.15;
+  return normalizeChance(state.mods && state.mods.freePickChance, typeof FREE_PICK_CHANCE!=="undefined"?FREE_PICK_CHANCE:0.15);
+}
+function smartPrereqChance(){
+  return normalizeChance(state.mods && state.mods.smartPrereqChance, 0.15);
+}
+function weightedPrereqChance(){
+  return normalizeChance(state.mods && state.mods.weightedChance, typeof WEIGHTED_CHANCE!=="undefined"?WEIGHTED_CHANCE:0.15);
 }
 function skillsTiedByPrereq(skill){
   const out=new Set([skill]);
@@ -1071,36 +1278,111 @@ function applyProfessionFilter(){
 }
 function buildPool(ctx, applyW, exclude){
   const pool=[];
+  const smartCandidates=[];
+  const wChance=weightedPrereqChance();
+  const sChance=smartPrereqChance();
   for(const item of state.remaining){
     if(ctx==="starter"&&item===FREE_PICK) continue;
     if(isBanned(item,ctx)) continue;
     if(item!==FREE_PICK&&!prereqsMet(item)) continue;
     if(item!==FREE_PICK&&isBlockedByProfession(item)) continue;
     if(exclude&&exclude.has(item)) continue;
-    const w=hasPrereq(item)&&!state.mods.ignorePrereqs;
-    if(w&&applyW){ if(Math.random()<WEIGHTED_CHANCE) pool.push({name:item,weighted:true}); }
-    else pool.push({name:item,weighted:w&&item!==FREE_PICK});
+    const gated=hasPrereq(item)&&!(state.mods&&state.mods.ignorePrereqs);
+    if(gated && item!==FREE_PICK) smartCandidates.push(item);
+    if(gated&&applyW){
+      if(wChance>=1 || Math.random()<wChance) pool.push({name:item,weighted:true});
+    } else {
+      pool.push({name:item,weighted:false});
+    }
+  }
+  if(applyW && smartCandidates.length && (sChance>=1 || Math.random()<sChance)){
+    const picks = sChance>=1 ? smartCandidates : [smartCandidates[Math.floor(Math.random()*smartCandidates.length)]];
+    picks.forEach(pick=>{
+      const hit=pool.find(p=>p.name===pick);
+      if(hit){ hit.weighted=true; hit.smart=true; }
+      else pool.push({name:pick, weighted:true, smart:true});
+    });
   }
   return pool;
 }
+function ensureWeightedInHand(cards){
+  if(!cards||!cards.length) return cards;
+  if(state.mods&&state.mods.ignorePrereqs) return cards;
+  const wChance=weightedPrereqChance();
+  const sChance=smartPrereqChance();
+  if(wChance<=0 && sChance<=0) return cards;
+  if(cards.some(c=>c.weighted||c.smart)) return cards;
+  const candidates=[];
+  for(const item of state.remaining){
+    if(item===FREE_PICK) continue;
+    if(isBanned(item,"generate")) continue;
+    if(!prereqsMet(item)) continue;
+    if(isBlockedByProfession(item)) continue;
+    if(hasPrereq(item)) candidates.push(item);
+  }
+  if(!candidates.length) return cards;
+  const force = (sChance>=1 || wChance>=1) || Math.random()<Math.max(sChance,wChance);
+  if(!force) return cards;
+  const pick=candidates[Math.floor(Math.random()*candidates.length)];
+  cards[0]={name:pick, weighted:true, smart:true};
+  return cards;
+}
 function buildItemPool(exclude){
-  const pool=state.itemRemaining.filter(i=>!(exclude&&exclude.has(i))).map(n=>({name:n,weighted:false,golden:false}));
-  // Unpacked: chance to inject a golden pack card that unlocks whole pack
-  if(state.mods&&state.mods.itemMode==="unpacked" && typeof ITEM_PACKS!=="undefined"){
-    const packs=Object.keys(ITEM_PACKS).filter(pk=>{
-      return (ITEM_PACKS[pk]||[]).some(it=>state.itemRemaining.includes(it) && !(exclude&&exclude.has(it)));
-    });
-    if(packs.length && Math.random()<goldenChance()){
-      const pk=packs[Math.floor(Math.random()*packs.length)];
-      pool.push({name:"✦ "+pk+" (All)", weighted:true, golden:true, packName:pk});
+  const pool=state.itemRemaining.filter(i=>{
+    if(exclude&&exclude.has(i)) return false;
+    if(state.bans&&state.bans[i]==="full") return false;
+    return true;
+  }).map(n=>({name:n,weighted:false,golden:false}));
+  const gChance=goldenChance();
+  const mode=(state.mods&&state.mods.itemMode)||"packed";
+  // Golden injection driven only by goldenChance (works in packed AND unpacked)
+  if(Math.random()<gChance){
+    if(mode==="unpacked" && typeof ITEM_PACKS!=="undefined"){
+      const packs=Object.keys(ITEM_PACKS).filter(pk=>{
+        if(state.bans&&state.bans[pk]==="full") return false;
+        return (ITEM_PACKS[pk]||[]).some(it=>state.itemRemaining.includes(it) && !(exclude&&exclude.has(it)) && !(state.bans&&state.bans[it]==="full"));
+      });
+      if(packs.length){
+        const pk=packs[Math.floor(Math.random()*packs.length)];
+        pool.push({name:"✦ "+pk+" (All)", weighted:true, golden:true, packName:pk});
+      } else {
+        pool.push({name:FREE_PICK, weighted:true, golden:true, freePick:true});
+      }
+    } else {
+      // Packed: golden free pick = 2 pack picks
+      pool.push({name:FREE_PICK, weighted:true, golden:true, freePick:true});
     }
   }
-  // Free Pick for items
-  if(Math.random()<freePickChance()){
-    const isGold=Math.random()<goldenChance();
-    pool.push({name:FREE_PICK, weighted:isGold, golden:isGold, freePick:true});
+  if(Math.random()<freePickChance() && !pool.some(p=>p.freePick)){
+    pool.push({name:FREE_PICK, weighted:false, golden:false, freePick:true});
   }
   return pool;
+}
+function ensureGoldenInHand(cards, kind){
+  if(!cards||!cards.length) return cards;
+  const g=goldenChance();
+  if(g<=0) return cards;
+  if(cards.some(c=>c.golden||(c.weighted&&c.freePick))) return cards;
+  if(g<1 && Math.random()>=g) return cards;
+  // Force golden into the hand
+  if(kind==="item"){
+    const mode=(state.mods&&state.mods.itemMode)||"packed";
+    if(mode==="unpacked" && typeof ITEM_PACKS!=="undefined"){
+      const packs=Object.keys(ITEM_PACKS).filter(pk=>{
+        if(state.bans&&state.bans[pk]==="full") return false;
+        return (ITEM_PACKS[pk]||[]).some(it=>state.itemRemaining.includes(it) && !(state.bans&&state.bans[it]==="full"));
+      });
+      if(packs.length){
+        const pk=packs[Math.floor(Math.random()*packs.length)];
+        cards[0]={name:"✦ "+pk+" (All)", weighted:true, golden:true, packName:pk};
+        return cards;
+      }
+    }
+    cards[0]={name:FREE_PICK, weighted:true, golden:true, freePick:true};
+    return cards;
+  }
+  cards[0]={name:FREE_PICK, weighted:true, golden:true, freePick:true};
+  return cards;
 }
 
 function updateStatus(){
@@ -1153,6 +1435,8 @@ function updateStatus(){
     if(itemOn && goldOn) t+=` · Item gen rolls: <strong>${itemCh}</strong>`;
     else if(itemOn) t+=` · Item rolls share skill charges`;
     if(coinsOn) t+=` · Spendable coins: <strong>${state.spendableCoins|0}</strong>`;
+    t+=` · Golden: <strong>${Math.round(goldenChance()*100)}%</strong>`;
+    t+=` · W/S: <strong>${Math.round(weightedPrereqChance()*100)}%</strong>/<strong>${Math.round(smartPrereqChance()*100)}%</strong>`;
     ci.innerHTML=t;
   }
   const gen=$("generate");
@@ -1217,6 +1501,113 @@ function updateStatus(){
     if(title) title.textContent="Random Draft Picker";
     document.title="Random Draft Picker";
   }
+  if(typeof updateChallengeLock==="function") updateChallengeLock();
+}
+function isChallengeBleek(){
+  try{ return sessionStorage.getItem("draftChallengeBleek")==="1"; }catch(e){ return !!window._challengeBleek; }
+}
+function setChallengeBleek(on){
+  window._challengeBleek=!!on;
+  try{ sessionStorage.setItem("draftChallengeBleek", on?"1":"0"); }catch(e){}
+  if(typeof updateChallengeLock==="function") updateChallengeLock();
+  showToast(on?"Bleek tools unlocked (this session)":"Bleek tools locked");
+}
+function updateChallengeLock(){
+  const challenge=!!(state&&state.challenge);
+  const bleek=isChallengeBleek();
+  const lock=challenge && !bleek;
+  document.querySelectorAll("[data-challenge-lock]").forEach(el=>{
+    if(lock){
+      el.style.display="none";
+      el.setAttribute("data-was-locked","1");
+    } else {
+      // restore — but respect feature flags for some buttons (manual item etc.)
+      if(el.id==="manualItemBtn"){
+        el.style.display=(state.mods&&state.mods.itemDraft)?"inline-flex":"none";
+      } else if(el.id==="genChallengeBtn"){
+        el.style.display=challenge?"none":"inline-flex"; // always hide gen code in challenge
+      } else {
+        el.style.display="inline-flex";
+      }
+      el.removeAttribute("data-was-locked");
+    }
+  });
+  // Generate challenge code: never show during challenge (even bleek uses patch)
+  const gen=$("genChallengeBtn");
+  if(gen && challenge) gen.style.display="none";
+  const note=$("challengeToolsNote");
+  if(note) note.style.display=(challenge && !bleek)?"block":"none";
+  const share=$("challengeCodeShare");
+  if(share){
+    share.style.display=challenge?"block":"none";
+    const disp=$("challengeCodeDisplay");
+    if(disp) disp.value=state.challengeCode||"";
+  }
+  const patch=$("challengeBleekPatch");
+  if(patch) patch.style.display=(challenge && isChallengeBleek())?"block":"none";
+}
+function applyPlayerChallengeCode(){
+  if(!(state&&state.challenge)){
+    const msg=$("challengePlayerMsg");
+    if(msg){ msg.style.color="#f88"; msg.textContent="Load a challenge save first."; }
+    return showToast("Not in challenge mode");
+  }
+  const raw=$("challengePlayerInput")&&$("challengePlayerInput").value;
+  const res=parseChallengeCode(raw);
+  const msg=$("challengePlayerMsg");
+  if(!res.ok){
+    if(msg){ msg.style.color="#f88"; msg.textContent=res.msg||"Invalid code"; }
+    return showToast(res.msg||"Invalid code");
+  }
+  state.mods=Object.assign({}, state.mods, res.mods);
+  state.bans=Object.assign({}, state.bans||{}, res.bans||{});
+  if(res.autoSkills&&res.autoSkills.length){
+    state.autoSkills=[...new Set([...(state.autoSkills||[]), ...res.autoSkills])];
+  }
+  if(res.starterItemAllow&&res.starterItemAllow.length){
+    state.starterItemAllow=[...new Set([...(state.starterItemAllow||[]), ...res.starterItemAllow])];
+  }
+  state.challenge=true;
+  state.challengeCode=String(raw||"").trim().replace(/\s+/g,"");
+  if(typeof applyAutoSkills==="function") applyAutoSkills();
+  if(typeof applyBansToPools==="function") applyBansToPools();
+  if(typeof applyProfessionFilter==="function") applyProfessionFilter();
+  if(typeof syncSkillItems==="function") syncSkillItems();
+  save(); renderAll();
+  pushHistory("Challenge code updated");
+  if(msg){ msg.style.color="#00b894"; msg.textContent="Rules updated — progress kept."; }
+  const m=$("challengePlayerModal"); if(m) m.classList.remove("open");
+  showToast("Challenge code applied — progress kept");
+}
+function openChallengePlayerModal(){
+  if(!(state&&state.challenge)) return showToast("Only available during a challenge");
+  if($("challengePlayerInput")) $("challengePlayerInput").value="";
+  if($("challengePlayerMsg")) $("challengePlayerMsg").textContent="";
+  const m=$("challengePlayerModal"); if(m) m.classList.add("open");
+}
+function applyChallengePatch(){
+  if(!(state&&state.challenge)) return showToast("Not in challenge mode");
+  if(!isChallengeBleek()) return showToast("Bleek only");
+  const raw=$("challengePatchInput")&&$("challengePatchInput").value;
+  const res=parseChallengeCode(raw);
+  if(!res.ok) return showToast(res.msg||"Invalid code");
+  // Merge rules without wiping progress
+  state.mods=Object.assign({}, state.mods, res.mods);
+  state.bans=Object.assign({}, state.bans||{}, res.bans||{});
+  if(res.autoSkills&&res.autoSkills.length){
+    state.autoSkills=[...new Set([...(state.autoSkills||[]), ...res.autoSkills])];
+  }
+  if(res.starterItemAllow&&res.starterItemAllow.length){
+    state.starterItemAllow=[...new Set([...(state.starterItemAllow||[]), ...res.starterItemAllow])];
+  }
+  state.challengeCode=String(raw||"").trim().replace(/\s+/g,"");
+  if(typeof applyAutoSkills==="function") applyAutoSkills();
+  if(typeof applyBansToPools==="function") applyBansToPools();
+  if(typeof applyProfessionFilter==="function") applyProfessionFilter();
+  if(typeof syncSkillItems==="function") syncSkillItems();
+  save(); renderAll();
+  pushHistory("Challenge patched");
+  showToast("Challenge rules updated — progress kept");
 }
 function renderPicked(){
   const el=$("pickedList");
@@ -1275,6 +1666,13 @@ function normalizeState(data){
   if(typeof s.starterItemUses!=="number") s.starterItemUses=0;
   if(typeof s.mods.questsEnabled!=="boolean") s.mods.questsEnabled=false;
   if(typeof s.mods.questCooldownMinutes!=="number") s.mods.questCooldownMinutes=60;
+  if(typeof s.mods.skipPenalty!=="boolean") s.mods.skipPenalty=false;
+  if(typeof s.mods.skipPenaltyMinutes!=="number") s.mods.skipPenaltyMinutes=15;
+  // Questing Only saves created before the flag existed
+  if(s.rulesetName==="questing"){
+    s.mods.skipPenalty=true;
+    if(!s.mods.skipPenaltyMinutes) s.mods.skipPenaltyMinutes=15;
+  }
   if(typeof s.questStreak!=="number") s.questStreak=0;
   if(typeof s.questCooldownUntil!=="number") s.questCooldownUntil=0;
   if(s.quest===undefined) s.quest=null;
@@ -1299,8 +1697,10 @@ function normalizeState(data){
   if(typeof s.mods.professions!=="boolean") s.mods.professions=false;
   if(!s.mods.gatherSkill || s.mods.gatherSkill==="Fishing") s.mods.gatherSkill="Mining";
   if(!s.mods.craftSkill) s.mods.craftSkill="Blacksmith";
-  if(typeof s.mods.goldenChance!=="number") s.mods.goldenChance=0.15;
-  if(typeof s.mods.freePickChance!=="number") s.mods.freePickChance=0.15;
+  s.mods.goldenChance=normalizeChance(s.mods.goldenChance, 0.15);
+  s.mods.freePickChance=normalizeChance(s.mods.freePickChance, 0.15);
+  s.mods.smartPrereqChance=normalizeChance(s.mods.smartPrereqChance, 0.15);
+  s.mods.weightedChance=normalizeChance(s.mods.weightedChance, 0.15);
   return s;
 }
 function readSavesStore(){
@@ -1535,7 +1935,8 @@ function showRulesetCustom(){
   if(back) back.style.display="inline-flex";
   if(startP) startP.style.display="none";
   if(!window._rsAutoSkills) window._rsAutoSkills=[];
-  fillRsAutoSkills();
+  if($("rsAutoSkillsToggle")) $("rsAutoSkillsToggle").checked=false;
+  if($("rsAutoSkillsWrap")) $("rsAutoSkillsWrap").style.display="none";
   updateRulesetDesc();
 }
 function showRulesetPreset(id){
@@ -1581,16 +1982,25 @@ function fillRsAutoSkills(){
 }
 
 function openGenChallengeModal(){
-  const list=$("genChallengeBanList");
-  if(list && typeof SKILL_BAN_CODES!=="undefined"){
-    list.innerHTML=Object.keys(SKILL_BAN_CODES).map(sk=>{
-      const c=SKILL_BAN_CODES[sk];
-      return `<label style="font-size:.78rem;background:#252530;border:1px solid #333;padding:.25rem .45rem;border-radius:6px;display:inline-flex;gap:.3rem;align-items:center;cursor:pointer"><input type="checkbox" data-ban-sk="${sk}"> ${sk} <span style="color:#666">z${c}</span></label>`;
+  const mk=(list, map, prefix, dataAttr)=>{
+    if(!list || !map) return;
+    list.innerHTML=Object.keys(map).sort((a,b)=>a.localeCompare(b)).map(name=>{
+      const c=map[name];
+      return `<label style="font-size:.72rem;background:#252530;border:1px solid #333;padding:.2rem .4rem;border-radius:6px;display:inline-flex;gap:.25rem;align-items:center;cursor:pointer"><input type="checkbox" ${dataAttr}="${name.replace(/"/g,'&quot;')}"> ${name} <span style="color:#666">${prefix}${c}</span></label>`;
     }).join("");
-  }
+  };
+  mk($("genChallengeBanList"), typeof SKILL_BAN_CODES!=="undefined"?SKILL_BAN_CODES:null, "z", "data-ban-sk");
+  mk($("genChallengeAutoList"), typeof SKILL_BAN_CODES!=="undefined"?SKILL_BAN_CODES:null, "s", "data-auto-sk");
+  mk($("genChallengePackBanList"), typeof PACK_BAN_CODES!=="undefined"?PACK_BAN_CODES:null, "p", "data-ban-pack");
+  mk($("genChallengeItemBanList"), typeof ITEM_BAN_CODES!=="undefined"?ITEM_BAN_CODES:null, "i", "data-ban-item");
+  mk($("genChallengeStarterItemList"), typeof ITEM_BAN_CODES!=="undefined"?ITEM_BAN_CODES:null, "w", "data-starter-item");
   if($("gcInterval")) $("gcInterval").value = state.mods.customInterval ? state.mods.levelsPerCharge : "";
   if($("gcCharges")) $("gcCharges").value = state.mods.chargesPerAward||1;
   if($("gcMax")) $("gcMax").value = state.mods.maxLevel||100;
+  if($("gcGolden")) $("gcGolden").value = state.mods.goldenChance!=null?state.mods.goldenChance:0.15;
+  if($("gcFreePick")) $("gcFreePick").value = state.mods.freePickChance!=null?state.mods.freePickChance:0.15;
+  if($("gcSmart")) $("gcSmart").value = state.mods.smartPrereqChance!=null?state.mods.smartPrereqChance:0.15;
+  if($("gcWeighted")) $("gcWeighted").value = state.mods.weightedChance!=null?state.mods.weightedChance:0.15;
   if($("gcOutput")) $("gcOutput").value="";
   $("genChallengeModal").classList.add("open");
 }
@@ -1601,9 +2011,19 @@ function buildGenChallengeCode(){
   else { mods.customInterval=!!mods.customInterval; }
   mods.chargesPerAward=Math.max(1,parseInt($("gcCharges")&&$("gcCharges").value,10)||1);
   mods.maxLevel=Math.max(2,parseInt($("gcMax")&&$("gcMax").value,10)||100);
-  const bans=[];
+  if(typeof normalizeChance==="function"){
+    mods.goldenChance=normalizeChance($("gcGolden")&&$("gcGolden").value, 0.15);
+    mods.freePickChance=normalizeChance($("gcFreePick")&&$("gcFreePick").value, 0.15);
+    mods.smartPrereqChance=normalizeChance($("gcSmart")&&$("gcSmart").value, 0.15);
+    mods.weightedChance=normalizeChance($("gcWeighted")&&$("gcWeighted").value, 0.15);
+  }
+  const bans=[], autos=[], packs=[], items=[], starters=[];
   document.querySelectorAll("#genChallengeBanList [data-ban-sk]:checked").forEach(cb=>bans.push(cb.getAttribute("data-ban-sk")));
-  const code=challengeCodeFromMods(mods, bans);
+  document.querySelectorAll("#genChallengeAutoList [data-auto-sk]:checked").forEach(cb=>autos.push(cb.getAttribute("data-auto-sk")));
+  document.querySelectorAll("#genChallengePackBanList [data-ban-pack]:checked").forEach(cb=>packs.push(cb.getAttribute("data-ban-pack")));
+  document.querySelectorAll("#genChallengeItemBanList [data-ban-item]:checked").forEach(cb=>items.push(cb.getAttribute("data-ban-item")));
+  document.querySelectorAll("#genChallengeStarterItemList [data-starter-item]:checked").forEach(cb=>starters.push(cb.getAttribute("data-starter-item")));
+  const code=challengeCodeFromMods(mods, bans, autos, packs, items, starters);
   if($("gcOutput")) $("gcOutput").value=code;
   return code;
 }
@@ -1618,6 +2038,8 @@ function openRulesetModal(){
   if($("rsItemMode")) $("rsItemMode").value="packed";
   if($("rsGoldItems")) $("rsGoldItems").checked=false;
   if($("rsQuests")) $("rsQuests").checked=false;
+  if($("rsSkipPenalty")) $("rsSkipPenalty").checked=false;
+  if($("rsSkipPenaltyMin")) $("rsSkipPenaltyMin").value=15;
   if($("rsProfessions")) $("rsProfessions").checked=false;
   if($("rsDraftReroll")) $("rsDraftReroll").checked=false;
   if($("rsInterval")) $("rsInterval").value="";
@@ -1650,7 +2072,7 @@ function readRulesetForm(){
   let levelsPer=4, customInterval=false;
   if(customIv!=null){ customInterval=true; levelsPer=customIv; }
   else if(item && !gold){ customInterval=true; levelsPer=2; }
-  return {
+  const out = {
     ignorePrereqs: !!( $("rsIgnorePrereq")&&$("rsIgnorePrereq").checked ),
     customInterval,
     levelsPerCharge: levelsPer,
@@ -1664,15 +2086,26 @@ function readRulesetForm(){
     draftReroll: !!( $("rsDraftReroll")&&$("rsDraftReroll").checked ),
     questsEnabled: !!( $("rsQuests")&&$("rsQuests").checked ),
     questCooldownMinutes: 60,
+    skipPenalty: !!( $("rsSkipPenalty")&&$("rsSkipPenalty").checked ),
+    skipPenaltyMinutes: Math.max(1, parseInt($("rsSkipPenaltyMin")&&$("rsSkipPenaltyMin").value,10)||15),
     goldItems: gold,
     professions: !!( $("rsProfessions")&&$("rsProfessions").checked ),
     gatherSkill: ($("rsGather")&&$("rsGather").value)||"Mining",
     craftSkill: ($("rsCraft")&&$("rsCraft").value)||"Blacksmith",
     goldenChance: 0.15,
-    freePickChance: 0.15
+    freePickChance: 0.15,
+    smartPrereqChance: 0.15,
+    weightedChance: 0.15,
+    rerollEveryLevel: false
   };
+  // Edit Values overrides (set from custom ruleset screen before creating save)
+  const ch = window._rsChanceMods || {};
+  ["goldenChance","freePickChance","smartPrereqChance","weightedChance"].forEach(k=>{
+    if(ch[k]!=null && !isNaN(Number(ch[k]))) out[k]=normalizeChance(ch[k], out[k]);
+  });
+  return out;
 }
-function buildChallengeTokens(mods, banList){
+function buildChallengeTokens(mods, banList, autoList, packBanList, itemBanList, starterAllowList){
   const t=["1"];
   if(mods.ignorePrereqs) t.push("5");
   if(mods.starterLimitOn) t.push("B");
@@ -1684,9 +2117,26 @@ function buildChallengeTokens(mods, banList){
   if(mods.questsEnabled) t.push("La");
   if(mods.professions) t.push("9");
   if(mods.draftReroll) t.push("x");
+  if(mods.rerollEveryLevel) t.push("R");
   (banList||[]).forEach(sk=>{
     const c = (typeof SKILL_BAN_CODES!=="undefined" && SKILL_BAN_CODES[sk]) || null;
     if(c) t.push("z"+c);
+  });
+  (autoList||[]).forEach(sk=>{
+    const c = (typeof SKILL_BAN_CODES!=="undefined" && SKILL_BAN_CODES[sk]) || null;
+    if(c) t.push("s"+c);
+  });
+  (packBanList||[]).forEach(pk=>{
+    const c = (typeof PACK_BAN_CODES!=="undefined" && PACK_BAN_CODES[pk]) || null;
+    if(c) t.push("p"+c);
+  });
+  (itemBanList||[]).forEach(it=>{
+    const c = (typeof ITEM_BAN_CODES!=="undefined" && ITEM_BAN_CODES[it]) || null;
+    if(c) t.push("i"+c);
+  });
+  (starterAllowList||[]).forEach(it=>{
+    const c = (typeof ITEM_BAN_CODES!=="undefined" && ITEM_BAN_CODES[it]) || null;
+    if(c) t.push("w"+c);
   });
   return t;
 }
@@ -1702,15 +2152,14 @@ function shuffleTokens(arr){
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
   return a;
 }
-function challengeCodeFromMods(mods, banList){
-  const rules=shuffleTokens(buildChallengeTokens(mods, banList)).join("");
+function challengeCodeFromMods(mods, banList, autoList, packBanList, itemBanList, starterAllowList){
+  const rules=shuffleTokens(buildChallengeTokens(mods, banList, autoList, packBanList, itemBanList, starterAllowList)).join("");
   const params=buildChallengeParamSegment(mods);
   return params ? rules+"-"+params : rules;
 }
 function parseChallengeCode(raw){
   const cleaned=String(raw||"").replace(/\s+/g,"").replace(/[()]/g,"");
   if(!cleaned) return {ok:false, msg:"Empty code"};
-  // Split rules | params on last '-' if right side is only H/K/J numbers
   let rulesPart=cleaned, paramsPart="";
   const dash=cleaned.lastIndexOf("-");
   if(dash>=0){
@@ -1726,18 +2175,42 @@ function parseChallengeCode(raw){
   while(i<s.length){
     if(s.slice(i,i+2)==="La"){ known.push("La"); i+=2; continue; }
     if(s.slice(i,i+2).toLowerCase()==="ui"){ known.push("ui"); i+=2; continue; }
-    // skill ban z + 2 char code
+    // w + 3 char starter item allow
+    if(s[i]==="w" || s[i]==="W"){
+      if(i+4>s.length) return {ok:false, msg:"Invalid starter-allow token"};
+      known.push("w"+s.slice(i+1,i+4).toLowerCase());
+      i+=4; continue;
+    }
+    // i + 3 char item ban
+    if(s[i]==="i" || s[i]==="I"){
+      if(i+4>s.length) return {ok:false, msg:"Invalid item ban token"};
+      known.push("i"+s.slice(i+1,i+4).toLowerCase());
+      i+=4; continue;
+    }
+    // p + 2 char pack ban
+    if(s[i]==="p" || s[i]==="P"){
+      if(i+3>s.length) return {ok:false, msg:"Invalid pack ban token"};
+      known.push("p"+s.slice(i+1,i+3).toLowerCase());
+      i+=3; continue;
+    }
+    // s + 2 char auto skill
+    if(s[i]==="s" || s[i]==="S"){
+      // avoid matching single 's' mid-token — only s+2 alnum
+      if(i+3>s.length) return {ok:false, msg:"Invalid start-skill token"};
+      known.push("s"+s.slice(i+1,i+3).toLowerCase());
+      i+=3; continue;
+    }
+    // z + 2 char skill ban
     if(s[i]==="z" || s[i]==="Z"){
-      if(i+3>s.length) return {ok:false, msg:"Invalid ban token"};
+      if(i+3>s.length) return {ok:false, msg:"Invalid skill ban token"};
       known.push("z"+s.slice(i+1,i+3).toLowerCase());
       i+=3; continue;
     }
     const ch=s[i];
-    if("51Bg9xcy".includes(ch)){ known.push(ch); i++; continue; }
+    if("51Bg9xcyR".includes(ch)){ known.push(ch); i++; continue; }
     if(ch==="_"||ch===","||ch==="."){ i++; continue; }
     return {ok:false, msg:"Invalid code format (unknown '"+ch+"')"};
   }
-  // params segment
   let j=0;
   const p=paramsPart;
   while(j<p.length){
@@ -1754,9 +2227,12 @@ function parseChallengeCode(raw){
     ignorePrereqs:false, customInterval:false, levelsPerCharge:4, chargesPerAward:1, maxLevel:100,
     starterLimitOn:false, starterMax:10, itemDraft:false, itemMode:"packed", skillItems:false,
     draftReroll:false, questsEnabled:false, questCooldownMinutes:60, goldItems:false,
-    professions:false, gatherSkill:"Mining", craftSkill:"Blacksmith", goldenChance:0.15, freePickChance:0.15
+    professions:false, gatherSkill:"Mining", craftSkill:"Blacksmith", goldenChance:0.15, freePickChance:0.15,
+    smartPrereqChance:0.20, weightedChance:0.15
   };
   const bans={};
+  const autoSkills=[];
+  const starterItemAllow=[];
   let hasUi=false, hasC=false, hasG=false, hasY=false;
   known.forEach(tok=>{
     if(tok==="1") return;
@@ -1769,10 +2245,26 @@ function parseChallengeCode(raw){
     else if(tok==="La") mods.questsEnabled=true;
     else if(tok==="9") mods.professions=true;
     else if(tok==="x") mods.draftReroll=true;
+    else if(tok==="R") mods.rerollEveryLevel=true;
     else if(/^z[a-z0-9]{2}$/i.test(tok)){
-      const code=tok.slice(1).toLowerCase();
-      const sk=BAN_CODE_TO_SKILL[code];
+      const sk=BAN_CODE_TO_SKILL[tok.slice(1).toLowerCase()];
       if(sk) bans[sk]="full";
+    }
+    else if(/^s[a-z0-9]{2}$/i.test(tok)){
+      const sk=BAN_CODE_TO_SKILL[tok.slice(1).toLowerCase()];
+      if(sk) autoSkills.push(sk);
+    }
+    else if(/^p[a-z0-9]{2}$/i.test(tok)){
+      const pk=PACK_CODE_TO_NAME[tok.slice(1).toLowerCase()];
+      if(pk) bans[pk]="full";
+    }
+    else if(/^i[a-z0-9]{3}$/i.test(tok)){
+      const it=ITEM_CODE_TO_NAME[tok.slice(1).toLowerCase()];
+      if(it) bans[it]="full";
+    }
+    else if(/^w[a-z0-9]{3}$/i.test(tok)){
+      const it=ITEM_CODE_TO_NAME[tok.slice(1).toLowerCase()];
+      if(it) starterItemAllow.push(it);
     }
     else if(/^H\d+$/i.test(tok)){ mods.customInterval=true; mods.levelsPerCharge=Math.max(1,parseInt(tok.slice(1),10)); }
     else if(/^K\d+$/i.test(tok)){ mods.chargesPerAward=Math.max(1,parseInt(tok.slice(1),10)); }
@@ -1782,7 +2274,7 @@ function parseChallengeCode(raw){
   if(hasG) mods.itemMode="packed";
   else if(hasC) mods.itemMode="unpacked";
   if(hasY) mods.goldItems=true;
-  return {ok:true, mods, bans, tokens:known};
+  return {ok:true, mods, bans, autoSkills, starterItemAllow, tokens:known};
 }
 function applyChallengeCodeToForm(){
   const raw=$("rsChallengeCode")&&$("rsChallengeCode").value;
@@ -1804,10 +2296,14 @@ function applyChallengeCodeToForm(){
   if($("rsMaxLevel")) $("rsMaxLevel").value=m.maxLevel||100;
   window._applyingChallenge=false;
   window._challengeBans = res.bans||{};
+  window._rsAutoSkills = res.autoSkills ? [...res.autoSkills] : [];
+  window._rsStarterItemAllow = res.starterItemAllow ? [...res.starterItemAllow] : [];
+  if(typeof fillRsAutoSkills==="function") fillRsAutoSkills();
   if(msg){
     msg.style.color="#00b894";
     const bc=Object.keys(window._challengeBans).length;
-    msg.textContent="Challenge applied"+(bc?" · "+bc+" skill ban(s)":"")+" — changing options clears challenge";
+    const ac=(window._rsAutoSkills||[]).length;
+    msg.textContent="Challenge applied"+(bc?" · "+bc+" ban(s)":"")+(ac?" · "+ac+" start skill(s)":"")+" — changing options clears challenge";
   }
   window._challengeActive=true;
   window._challengeCode=String(raw||"").trim();
@@ -1855,7 +2351,8 @@ function confirmRuleset(){
   const code=isChallenge?(window._challengeCode||""):"";
   const bans = isChallenge ? (window._challengeBans||{}) : {};
   const autoSkills = window._rsAutoSkills ? [...window._rsAutoSkills] : [];
-  createSaveWithMods(name, mods, {challenge:isChallenge, challengeCode:code, bans, autoSkills});
+  const starterItemAllow = window._rsStarterItemAllow ? [...window._rsStarterItemAllow] : [];
+  createSaveWithMods(name, mods, {challenge:isChallenge, challengeCode:code, bans, autoSkills, starterItemAllow});
   pendingRulesetName=null;
   window._challengeActive=false; window._challengeCode=""; window._challengeBans={};
   closeRulesetModal();
@@ -1867,11 +2364,16 @@ function confirmRuleset(){
 function confirmPresetRuleset(){
   const name=pendingRulesetName;
   if(!name) return;
-  let mods;
-  if(window._pendingPreset==="mondain") mods=mondainMods();
-  else return showToast("Pick a ruleset");
-  const autoSkills = presetAutoSkills(window._pendingPreset);
-  createSaveWithMods(name, mods, {challenge:false, challengeCode:"", rulesetName:window._pendingPreset, autoSkills});
+  const id=window._pendingPreset;
+  const p=(typeof RULESET_PRESETS!=="undefined"&&RULESET_PRESETS[id])||null;
+  if(!p) return showToast("Pick a ruleset");
+  const mods=JSON.parse(JSON.stringify(p.mods));
+  createSaveWithMods(name, mods, {
+    challenge:false, challengeCode:"", rulesetName:id,
+    autoSkills: p.autoSkills?[...p.autoSkills]:[],
+    bans: p.bans?JSON.parse(JSON.stringify(p.bans)):{},
+    starterItemAllow: p.starterItemAllow?[...p.starterItemAllow]:[]
+  });
   pendingRulesetName=null;
   window._pendingPreset=null;
   closeRulesetModal();
@@ -1908,7 +2410,9 @@ function createSaveWithMods(name, mods, opts){
     challengeCode: opts.challengeCode||"",
     bans: (opts.bans && typeof opts.bans==="object") ? opts.bans : {},
     autoSkills: Array.isArray(opts.autoSkills) ? opts.autoSkills : [],
-    hideXpTrackerPrompt: false
+    starterItemAllow: Array.isArray(opts.starterItemAllow) ? opts.starterItemAllow : [],
+    hideXpTrackerPrompt: false,
+    rulesetName: opts.rulesetName || ""
   });
   store.slots[name]=fresh;
   activeSaveName=name;
@@ -1918,6 +2422,7 @@ function createSaveWithMods(name, mods, opts){
   if(typeof applyAutoSkills==="function") applyAutoSkills();
   if(typeof applyProfessionFilter==="function") applyProfessionFilter();
   if(typeof syncSkillItems==="function") syncSkillItems();
+  if(typeof applyBansToPools==="function") applyBansToPools();
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   renderAll();
   if(typeof renderSavesList==="function") renderSavesList();
@@ -2022,6 +2527,9 @@ function addXP(){
       state.generateCharges+=per;
       showToast(`Level ${state.level}! +${per} Generate charge(s)`);
     }
+    if(state.mods&&state.mods.rerollEveryLevel){
+      state.rerolls=(state.rerolls||0)+1;
+    }
   }
   if(state.level>=maxL){state.xp=0;$("prestigeBtn").classList.add("show");}
   save(); updateStatus(); renderMilestones();
@@ -2051,7 +2559,9 @@ function applyModifiersRefresh(){
   state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
   state.mods.draftReroll=$("modDraftReroll")?$("modDraftReroll").checked:false;
   state.mods.questsEnabled=$("modQuests")?$("modQuests").checked:false;
-  state.mods.questCooldownMinutes=Math.max(1,parseInt($("modQuestCd")&&$("modQuestCd").value,10)||60);
+  { const qcd=parseInt($("modQuestCd")&&$("modQuestCd").value,10); state.mods.questCooldownMinutes=(qcd===0||qcd)?Math.max(0,qcd):60; }
+  state.mods.skipPenalty=!!($("modSkipPenalty")&&$("modSkipPenalty").checked);
+  state.mods.skipPenaltyMinutes=Math.max(1, parseInt($("modSkipPenaltyMin")&&$("modSkipPenaltyMin").value,10)||15);
   state.mods.goldItems=$("modGoldItems")?$("modGoldItems").checked:false;
   state.mods.professions=$("modProfessions")?$("modProfessions").checked:false;
   if($("modGatherSkill")) state.mods.gatherSkill=$("modGatherSkill").value||"Mining";
@@ -2121,6 +2631,8 @@ function doPrestige(){
   }
   // professionCoinsSpent stays; never refunded
   // spendableCoins / totalCoins unchanged (no refund of 10k profession buys)
+  if(typeof applyAutoSkills==="function") applyAutoSkills();
+  if(typeof applyBansToPools==="function") applyBansToPools();
   if(typeof applyProfessionFilter==="function") applyProfessionFilter();
   if(typeof syncSkillItems==="function") syncSkillItems();
   syncMilestoneSlots(); clearQuestState();
@@ -2131,6 +2643,7 @@ function doPrestige(){
   pushHistory("Prestige #"+state.prestige+" (professions kept)");
   cardsEl.innerHTML=`<p class="empty">Prestiged! Level 1 · +5 rerolls · professions kept</p>`;
   showToast("Prestige #"+state.prestige+" · professions kept");
+  promptForcedStarter();
 }
 function clearQuestState(){
   state.quest=null;
@@ -2156,6 +2669,7 @@ function deathReset(){
   // Re-grant primary gather/craft + purchased professions (same as Apply/Refresh Rules)
   state.skillValues={}; // all skills back to 0 on death
   if(typeof applyAutoSkills==="function") applyAutoSkills();
+  if(typeof applyBansToPools==="function") applyBansToPools();
   if(typeof applyProfessionFilter==="function") applyProfessionFilter();
   if(typeof syncSkillItems==="function") syncSkillItems();
   // professionCoinsSpent is never reduced / refunded
@@ -2373,9 +2887,10 @@ function generate(kind){
     pool=buildItemPool(generateExclude);
   } else {
     pool=buildPool("generate",true,generateExclude);
-    if(Math.random()<freePickChance()){
-      const isGold=Math.random()<goldenChance();
-      pool.push({name:FREE_PICK, weighted:isGold, golden:isGold, freePick:true});
+    if(Math.random()<goldenChance()){
+      pool.push({name:FREE_PICK, weighted:true, golden:true, freePick:true});
+    } else if(Math.random()<freePickChance()){
+      pool.push({name:FREE_PICK, weighted:false, golden:false, freePick:true});
     }
   }
   if(!pool.length){
@@ -2385,6 +2900,8 @@ function generate(kind){
     save(); updateStatus(); return;
   }
   generateCards=shuffle(pool).slice(0,Math.min(3,pool.length));
+  if(typeof ensureGoldenInHand==="function") generateCards=ensureGoldenInHand(generateCards, generateKind);
+  if(generateKind==="skill" && typeof ensureWeightedInHand==="function") generateCards=ensureWeightedInHand(generateCards);
   generateCards.forEach(c=>generateExclude.add(c.name));
   pushHistory(generateKind==="item"?"Item card gen":"Skill card gen");
   save(); updateStatus();
@@ -2397,12 +2914,26 @@ function renderGenerateCards(){
     let cls="card"+(item===FREE_PICK?" freepick":"")+(entry.weighted||entry.golden?" weighted":"");
     if(pendingSelect&&pendingSelect.item===item) cls+=" pending";
     const card=document.createElement("div"); card.className=cls;
-    let badge="";
-    if(entry.freePick && entry.golden) badge='<div class="badge">Golden Free</div>';
-    else if(entry.freePick) badge='<div class="badge">Free Pick</div>';
-    else if(entry.golden) badge='<div class="badge">Golden Pack</div>';
-    else if(entry.weighted) badge='<div class="badge">Weighted</div>';
+    let badge="", tip="";
+    if(entry.freePick && entry.golden){
+      badge='<div class="badge">Golden Free</div>';
+      tip = generateKind==="item"
+        ? "GOLDEN FREE PICK: Choose freely. Packed = 2 picks. Unpacked = unlocks the whole pack of the item you choose."
+        : "GOLDEN FREE PICK: Choose freely. If prereqs are on, grants the skill and its linked prereq pair.";
+    } else if(entry.freePick){
+      badge='<div class="badge">Free Pick</div>';
+      tip = "FREE PICK: Open the full list and choose any available option.";
+    } else if(entry.golden){
+      badge='<div class="badge">Golden Pack</div>';
+      tip = "GOLDEN PACK: Unlocks every item inside this pack at once (unpacked mode bonus card).";
+    } else if(entry.weighted || entry.smart){
+      badge='<div class="badge">'+(entry.smart?"Smart":"Weighted")+'</div>';
+      tip = "WEIGHTED / SMART: A prereq-gated skill you can take because you already own its requirement. Glows gold.";
+    } else {
+      tip = "Normal draft option — select then Confirm to lock it in.";
+    }
     const hint=entry.freePick?(entry.golden?"Golden free pick — special rewards":"Click to choose freely"):(entry.golden?"Unlocks entire pack":"Click to select · Confirm to lock");
+    card.title = tip;
     card.innerHTML=`${badge}<div class="number">#${index+1}</div><div class="name">${item}</div><div class="hint">${hint}</div><button class="reroll-one" data-idx="${index}" ${state.rerolls<1?"disabled":""}>Reroll (1 token)</button>`;
     card.addEventListener("click",e=>{
       if(e.target.classList.contains("reroll-one")) return;
@@ -2553,10 +3084,21 @@ function rerollUnlocked(){
   save(); updateStatus();
   if(starterIsItems) drawItemStarter(false); else drawStarter(false);
 }
+function isItemBannedFull(name){
+  return !!(state.bans&&state.bans[name]==="full");
+}
+/** Preferred starter weapons (allow-list). Not exclusive — general pool still fills other slots. */
+function getPreferredStarterWeapons(){
+  const allow=state.starterItemAllow||[];
+  const picked=new Set(state.itemPicked||[]);
+  return allow.filter(it=>it && !picked.has(it) && !isItemBannedFull(it));
+}
 function getCombatWeapons(){
   const out=[]; const seen=new Set(); const picked=new Set(state.itemPicked||[]);
-  const add=it=>{ if(it&&!seen.has(it)&&!picked.has(it)){ seen.add(it); out.push(it); } };
-  let any=false;
+  const add=it=>{ if(it&&!seen.has(it)&&!picked.has(it)&&!isItemBannedFull(it)){ seen.add(it); out.push(it); } };
+  // Prefer ruleset allow-list weapons first
+  getPreferredStarterWeapons().forEach(add);
+  let any=out.length>0;
   (state.picked||[]).forEach(sk=>{
     const list=(typeof COMBAT_STARTER_ITEMS!=="undefined" && COMBAT_STARTER_ITEMS[sk])||[];
     if(list.length) any=true;
@@ -2570,28 +3112,27 @@ function getCombatWeapons(){
 function getGeneralStarterItems(excludeNames){
   const ex=new Set(excludeNames||[]);
   const picked=new Set(state.itemPicked||[]);
-  // From remaining pool (packs or loose)
-  const fromPool=(state.itemRemaining||[]).filter(x=>!ex.has(x)&&!picked.has(x));
-  return fromPool;
+  // Full unpacked/packed remaining pool (bans already applied) — NOT restricted to allow-list
+  return (state.itemRemaining||[]).filter(x=>!ex.has(x)&&!picked.has(x)&&!isItemBannedFull(x));
 }
 function drawItemStarter(full){
   const weapons=getCombatWeapons();
+  const preferred=getPreferredStarterWeapons();
   const locked=starterCards.filter(c=>c.locked).map(c=>c.name);
   if(full){
     const picks=[];
-    // Always try to include 1 usable combat weapon
-    const w=shuffle(weapons);
-    if(w.length) picks.push(w[0]);
-    const restPool=shuffle(getGeneralStarterItems(picks).concat(w.slice(1).filter(x=>!picks.includes(x))));
+    // Prefer allow-list weapon if set, else combat weapon
+    const pref=shuffle(preferred.length?preferred:weapons);
+    if(pref.length) picks.push(pref[0]);
+    // Fill remaining from general pool (armor, etc.) — unique only
+    const restPool=shuffle(getGeneralStarterItems(picks));
     while(picks.length<STARTER_COUNT && restPool.length){
-      picks.push(restPool.shift());
+      const n=restPool.shift();
+      if(!picks.includes(n)) picks.push(n);
     }
-    // still short? pad from any remaining weapons
-    while(picks.length<STARTER_COUNT && w.length){
-      const n=w.find(x=>!picks.includes(x));
-      if(!n) break;
-      picks.push(n);
-    }
+    // still short? other preferred/combat weapons
+    const pad=shuffle(weapons.filter(x=>!picks.includes(x)));
+    while(picks.length<STARTER_COUNT && pad.length) picks.push(pad.shift());
     starterCards=picks.map(n=>({name:n,locked:false,weighted:false}));
   } else {
     const need=starterCards.filter(c=>!c.locked).length;
@@ -2629,6 +3170,25 @@ function applyAutoSkills(){
     state.remaining = state.remaining.filter(x=>x!==sk);
   });
   if(typeof syncSkillItems==="function") syncSkillItems();
+}
+function applyBansToPools(){
+  if(!state.bans) return;
+  // Skills
+  if(state.remaining){
+    state.remaining = state.remaining.filter(x=>!(state.bans[x]==="full"));
+  }
+  // Items + expand pack bans into member items (critical for unpacked)
+  if(state.itemRemaining){
+    const kill=new Set();
+    Object.keys(state.bans).forEach(name=>{
+      if(state.bans[name]!=="full") return;
+      kill.add(name);
+      if(typeof ITEM_PACKS!=="undefined" && ITEM_PACKS[name]){
+        (ITEM_PACKS[name]||[]).forEach(it=>kill.add(it));
+      }
+    });
+    state.itemRemaining = state.itemRemaining.filter(x=>!kill.has(x));
+  }
 }
 function shouldShowXpTrackerPrompt(){
   return !state.hideXpTrackerPrompt;
@@ -2785,7 +3345,9 @@ function syncModUI(){
   if($("modItemMode")) $("modItemMode").value=state.mods.itemMode||"packed";
   if($("modDraftReroll")) $("modDraftReroll").checked=!!state.mods.draftReroll;
   if($("modQuests")) $("modQuests").checked=!!state.mods.questsEnabled;
-  if($("modQuestCd")) $("modQuestCd").value=state.mods.questCooldownMinutes||60;
+  if($("modQuestCd")) $("modQuestCd").value=(state.mods.questCooldownMinutes!=null?state.mods.questCooldownMinutes:60);
+  if($("modSkipPenalty")) $("modSkipPenalty").checked=!!state.mods.skipPenalty;
+  if($("modSkipPenaltyMin")) $("modSkipPenaltyMin").value=state.mods.skipPenaltyMinutes!=null?state.mods.skipPenaltyMinutes:15;
   if($("modGoldItems")) $("modGoldItems").checked=!!state.mods.goldItems;
   if($("modProfessions")) $("modProfessions").checked=!!state.mods.professions;
   if($("modGatherSkill")) $("modGatherSkill").value=state.mods.gatherSkill||"Mining";
@@ -2803,6 +3365,8 @@ function syncEditUI(){
   if($("editStarterItemUses")) $("editStarterItemUses").value=state.starterItemUses||0;
   if($("editGoldenChance")) $("editGoldenChance").value = (state.mods.goldenChance!=null?state.mods.goldenChance:0.15);
   if($("editFreePickChance")) $("editFreePickChance").value = (state.mods.freePickChance!=null?state.mods.freePickChance:0.15);
+  if($("editSmartPrereq")) $("editSmartPrereq").value = (state.mods.smartPrereqChance!=null?state.mods.smartPrereqChance:0.15);
+  if($("editWeightedChance")) $("editWeightedChance").value = (state.mods.weightedChance!=null?state.mods.weightedChance:0.15);
 }
 function applyEditValues(){
   state.generateCharges=Math.max(0,parseInt($("editCharges").value,10)||0);
@@ -2814,12 +3378,32 @@ function applyEditValues(){
   state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
   state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
   if($("editStarterItemUses")) state.starterItemUses=Math.max(0,parseInt($("editStarterItemUses").value,10)||0);
-  if($("editGoldenChance")) state.mods.goldenChance=Math.max(0,Math.min(1, parseFloat($("editGoldenChance").value)));
-  if($("editFreePickChance")) state.mods.freePickChance=Math.max(0,Math.min(1, parseFloat($("editFreePickChance").value)));
-  if(isNaN(state.mods.goldenChance)) state.mods.goldenChance=0.15;
-  if(isNaN(state.mods.freePickChance)) state.mods.freePickChance=0.15;
+  if(!state.mods) state.mods={};
+  if($("editGoldenChance")){
+    state.mods.goldenChance=normalizeChance($("editGoldenChance").value, 0.15);
+    $("editGoldenChance").value=state.mods.goldenChance;
+  }
+  if($("editFreePickChance")){
+    state.mods.freePickChance=normalizeChance($("editFreePickChance").value, 0.15);
+    $("editFreePickChance").value=state.mods.freePickChance;
+  }
+  if($("editSmartPrereq")){
+    state.mods.smartPrereqChance=normalizeChance($("editSmartPrereq").value, 0.15);
+    $("editSmartPrereq").value=state.mods.smartPrereqChance;
+  }
+  if($("editWeightedChance")){
+    state.mods.weightedChance=normalizeChance($("editWeightedChance").value, 0.15);
+    $("editWeightedChance").value=state.mods.weightedChance;
+  }
+  // Persist for custom ruleset create (readRulesetForm merges these)
+  window._rsChanceMods = {
+    goldenChance: state.mods.goldenChance,
+    freePickChance: state.mods.freePickChance,
+    smartPrereqChance: state.mods.smartPrereqChance,
+    weightedChance: state.mods.weightedChance
+  };
   save(); updateStatus(); renderMilestones();
-  showToast("Values updated");
+  showToast("Chances saved · Golden "+Math.round(goldenChance()*100)+"% · Smart "+Math.round(smartPrereqChance()*100)+"% · Weighted "+Math.round(weightedPrereqChance()*100)+"%");
 }
 function doCustomPick(){
   const lines=$("customInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
@@ -2906,14 +3490,99 @@ function skillVal(name){
   const v=state.skillValues&&state.skillValues[name];
   return typeof v==="number" ? v : null;
 }
-function renderSkillValues(){
-  const list=$("skillValuesList"); const sel=$("skillValueSelect");
-  if(!list||!sel) return;
-  const drafted=(state.picked||[]).filter(s=>s!==FREE_PICK);
-  sel.innerHTML=drafted.length?drafted.map(s=>`<option value="${s}">${s}</option>`).join(""):`<option value="">(draft skills first)</option>`;
-  const entries=Object.entries(state.skillValues||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-  if(!entries.length){ list.innerHTML='<span style="color:#555;font-size:.85rem">No skill values recorded</span>'; return; }
-  list.innerHTML=entries.map(([n,v])=>`<div style="display:flex;justify-content:space-between;gap:.5rem;background:#1c1c24;border:1px solid #2a2a35;border-radius:8px;padding:.35rem .6rem"><span>${n}</span><strong style="color:#a29bfe">${Number(v).toFixed(1)}</strong></div>`).join("");
+function renderSkillValues(force){
+  const box=$("skillValuesList");
+  if(!box) return;
+  const modal=$("skillValuesModal");
+  // Do not rebuild inputs while the modal is open and user is typing
+  if(!force && modal && modal.classList.contains("open")) return;
+  const track=typeof QUEST_SKILL_TRACK!=="undefined"?QUEST_SKILL_TRACK:(typeof CRAFT_SKILLS!=="undefined"?CRAFT_SKILLS:[]);
+  const trackSet=new Set(track);
+  const drafted=(state.picked||[]).filter(s=>s && s!==FREE_PICK && trackSet.has(s));
+  if(!drafted.length){
+    box.innerHTML=`<p style="color:#666;font-size:.85rem;font-style:italic">Draft a craft or gathering skill first (Alchemy, Mining, Lumberjacking, etc.).</p>`;
+    return;
+  }
+  box.innerHTML=drafted.map(sk=>{
+    const v = (state.skillValues&&state.skillValues[sk]!=null)?state.skillValues[sk]:"";
+    return `<div style="display:flex;align-items:center;gap:.5rem;background:#1a1814;border:1px solid #3d3420;border-radius:8px;padding:.45rem .55rem">
+      <label style="flex:1;font-size:.88rem;color:#f5e6c8;font-weight:600">${sk}</label>
+      <input type="number" min="0" max="125" step="0.1" data-draft-sk="${sk}" value="${v}" placeholder="0.0" style="width:88px;background:#12100e;border:1px solid #5a4a30;color:#f5e6c8;padding:.35rem .45rem;border-radius:6px;font-size:.9rem">
+    </div>`;
+  }).join("");
+}
+function openSkillValuesModal(){
+  renderSkillValues(true); // force rebuild once on open
+  const m=$("skillValuesModal"); if(m) m.classList.add("open");
+}
+function saveAllSkillValues(){
+  if(!state.skillValues) state.skillValues={};
+  const inputs=document.querySelectorAll("#skillValuesList [data-draft-sk]");
+  if(!inputs.length) return showToast("Nothing to save");
+  let n=0;
+  inputs.forEach(inp=>{
+    const sk=inp.getAttribute("data-draft-sk");
+    let v=parseFloat(inp.value);
+    if(inp.value==="" || isNaN(v)){
+      delete state.skillValues[sk];
+    } else {
+      v=Math.max(0,Math.min(125,v));
+      state.skillValues[sk]=v;
+      inp.value=v;
+      n++;
+    }
+  });
+  save();
+  const m=$("skillValuesModal"); if(m) m.classList.remove("open");
+  showToast("Saved "+n+" skill value(s)");
+  pushHistory("Skill values updated ("+n+")");
+}
+function listAccessibleQuests(){
+  const out=[];
+  if(typeof MONSTER_POOL!=="undefined"){
+    MONSTER_POOL.forEach(m=>{
+      const def={...m, type:"kill", _src:"monster", title:"Kill "+(m.name||"creatures"), description:m.description||""};
+      if(questEligible(def)) out.push(def);
+    });
+  }
+  if(typeof CRAFT_QUESTS!=="undefined"){
+    CRAFT_QUESTS.forEach(c=>{
+      const def={...c, type:"craft", _src:"craft"};
+      if(questEligible(def)) out.push(def);
+    });
+  }
+  if(typeof NPC_QUESTS!=="undefined"){
+    NPC_QUESTS.forEach(n=>{
+      const def={...n, type:"npc", _src:"npc", title:n.title||("Complete "+(n.name||"NPC")+" tribute")};
+      if(questEligible(def)) out.push(def);
+    });
+  }
+  return out;
+}
+function openQuestBoard(){
+  const box=$("questBoardList");
+  if(!box) return;
+  if(!(state.mods&&state.mods.questsEnabled)){
+    box.innerHTML=`<p style="color:#888">The Bounty Board is sealed. Enable Quests in Modifiers.</p>`;
+  } else {
+    const list=listAccessibleQuests();
+    if(!list.length){
+      box.innerHTML=`<p style="color:#888;font-style:italic">No bounties fit your rank yet. Grow stronger or learn new crafts.</p>`;
+    } else {
+      box.innerHTML=list.map(q=>{
+        const kind=q.type==="craft"?"Crafting":(q.type==="npc"?"NPC Tribute":"Slaying");
+        const req=(q.requires&&q.requires.length)?` · needs ${q.requires.join("/")}`:"";
+        const lvl=q.minLevel?` · lvl ${q.minLevel}+`:"";
+        const sk=q.minSkill!=null?` · skill ${q.minSkill}+`:"";
+        return `<div style="background:#1a1814;border:1px solid #3d3420;border-radius:10px;padding:.65rem .75rem">
+          <div style="font-size:.72rem;color:#c9a227;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem">${kind}${lvl}${sk}</div>
+          <div style="font-weight:700;color:#f5e6c8;font-size:.92rem">${q.title||q.name||"Quest"}</div>
+          <div style="font-size:.8rem;color:#8a7f6a;margin-top:.25rem;line-height:1.4">${q.description||""}${req}</div>
+        </div>`;
+      }).join("");
+    }
+  }
+  const m=$("questBoardModal"); if(m) m.classList.add("open");
 }
 function saveSkillValue(){
   const name=($("skillValueSelect")&&$("skillValueSelect").value)||"";
@@ -2977,9 +3646,13 @@ function questEligible(def){
   return false;
 }
 function questCooldownMs(){
-  return Math.max(1, parseInt(state.mods.questCooldownMinutes,10)||60) * 60 * 1000;
+  // 0 minutes = no cooldown
+  const mins=parseInt(state.mods&&state.mods.questCooldownMinutes,10);
+  const m = (mins===0 || mins) ? Math.max(0, mins) : 60;
+  return m * 60 * 1000;
 }
 function questOnCooldown(){
+  // Honor absolute end time (skip penalty can set a rest even when normal CD is 0)
   return Date.now() < (state.questCooldownUntil||0);
 }
 function formatRemain(ms){
@@ -2999,17 +3672,26 @@ function updateQuestButton(){
     btn.disabled=true;
     return;
   }
-  btn.style.display="inline-flex";
-  btn.classList.add("show");
-  if(questOnCooldown()){
+  // Hide while on an active task or choosing one
+  const onTask = !!(state.quest || (state.questChoices&&state.questChoices.length));
+  if(onTask){
+    btn.style.display="none";
     btn.disabled=true;
-    btn.classList.add("cooldown");
+    btn.classList.remove("show","cooldown");
+    return;
+  }
+  if(questOnCooldown()){
+    btn.style.display="flex";
+    btn.classList.add("show","cooldown");
+    btn.disabled=true;
     const left=(state.questCooldownUntil||0)-Date.now();
-    btn.textContent="Quest CD "+formatRemain(left);
+    btn.textContent="Rest "+formatRemain(left);
   } else {
-    btn.disabled=false;
+    btn.style.display="flex";
+    btn.classList.add("show");
     btn.classList.remove("cooldown");
-    btn.textContent="Generate Quest";
+    btn.disabled=false;
+    btn.textContent="Seek a Task";
   }
 }
 let _questTimer=null;
@@ -3146,6 +3828,9 @@ function completeQuest(){
         state.levelsSinceReward=0;
         state.generateCharges+=per;
       }
+      if(state.mods&&state.mods.rerollEveryLevel){
+        state.rerolls=(state.rerolls||0)+1;
+      }
     }
     if(state.level>=maxL) state.xp=0;
     if(state.mods&&state.mods.goldItems){
@@ -3173,6 +3858,9 @@ function completeQuest(){
       if(state.levelsSinceReward>=interval){
         state.levelsSinceReward=0;
         state.generateCharges+=per;
+      }
+      if(state.mods&&state.mods.rerollEveryLevel){
+        state.rerolls=(state.rerolls||0)+1;
       }
     }
     if(state.level>=maxL) state.xp=0;
@@ -3202,14 +3890,25 @@ function completeQuest(){
 }
 function skipQuest(){
   if(!state.quest && !(state.questChoices&&state.questChoices.length)) return;
-  if(!confirm("Skip quest? This resets your quest chain streak.")) return;
+  const penaltyOn = !!(state.mods&&state.mods.skipPenalty) || state.rulesetName==="questing";
+  const penaltyMin = Math.max(1, parseInt(state.mods&&state.mods.skipPenaltyMinutes,10)||15);
+  const skipMsg = penaltyOn
+    ? ("Abandon this task? Chain resets and you must rest "+penaltyMin+" minute(s) before seeking another.")
+    : "Skip quest? This resets your quest chain streak.";
+  if(!confirm(skipMsg)) return;
   state.quest=null;
   state.questChoices=null;
   state.questStreak=0;
-  state.questCooldownUntil=Date.now()+questCooldownMs();
-  pushHistory("Quest skipped");
+  if(penaltyOn){
+    state.questCooldownUntil=Date.now() + penaltyMin*60*1000;
+    pushHistory("Task abandoned · "+penaltyMin+"m rest (skip penalty)");
+    showToast("Task abandoned · rest "+penaltyMin+" minute(s)");
+  } else {
+    state.questCooldownUntil=Date.now()+questCooldownMs();
+    pushHistory("Quest skipped");
+    showToast("Quest skipped · chain reset");
+  }
   save(); renderQuestLog(); updateQuestButton();
-  showToast("Quest skipped · chain reset");
 }
 function resetQuestCooldown(){
   state.questCooldownUntil=0;
@@ -3217,10 +3916,11 @@ function resetQuestCooldown(){
   showToast("Quest cooldown cleared");
 }
 function renderQuestLog(){
+  if(typeof updateQuestButton==="function") updateQuestButton();
   const body=$("questLogBody");
   if(!body) return;
   if(!(state.mods&&state.mods.questsEnabled)){
-    body.innerHTML=`<p class="ql-empty">Quests disabled. Turn them on under Modifiers.</p>`;
+    body.innerHTML=`<p class="ql-empty">The road of tasks is closed. Open it under Modifiers.</p>`;
     return;
   }
   const streak=state.questStreak||0;
@@ -3229,7 +3929,7 @@ function renderQuestLog(){
     ? `Chain ready — next quest gets ×${QUEST_CHAIN_BONUS_MULT}, then resets`
     : `Chain <strong>${streak}</strong> / ${QUEST_CHAIN_BONUS_AT} — bonus on the ${QUEST_CHAIN_BONUS_AT}th, then resets`;
   if(state.questChoices&&state.questChoices.length){
-    body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose one quest:</p>`+
+    body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose your burden:</p>`+
       state.questChoices.map((q,i)=>`<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
         <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":"Slaying")} · ${(q.description||"").slice(0,80)}</span>
       </button>`).join("")+
@@ -3240,7 +3940,7 @@ function renderQuestLog(){
     return;
   }
   if(!state.quest){
-    body.innerHTML=`<p class="ql-empty">No active quest. Press <strong>Generate Quest</strong> when ready.</p>
+    body.innerHTML=`<p class="ql-empty">No task binds you. Press <strong>Seek a Task</strong> when the road calls.</p>
       <div class="ql-chain">${chainNote}</div>`;
     return;
   }
@@ -3285,7 +3985,22 @@ function renderQuestLog(){
   const k=$("questKillsLogged"); if(k) k.onchange=setQuestKills;
 }
 
-function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();if(typeof renderItemMilestones==="function")renderItemMilestones();syncModUI();renderQuestLog();ensureQuestTimer();if(typeof renderSkillValues==="function")renderSkillValues();if(typeof renderHistory==="function")renderHistory();}
+function renderAll(){updateStatus();renderPicked();renderBans();renderBanSelect();renderMilestones();if(typeof renderItemMilestones==="function")renderItemMilestones();syncModUI();renderQuestLog();ensureQuestTimer();if(typeof renderSkillValues==="function")renderSkillValues();if(typeof renderHistory==="function")renderHistory();if(typeof updateChallengeLock==="function")updateChallengeLock();}
+// Secret bleek unlock in challenge: Ctrl+Shift+Alt+A
+// Players: Shift+V to paste an updated challenge code mid-run
+document.addEventListener("keydown", (e)=>{
+  const tag=(e.target&&e.target.tagName||"").toLowerCase();
+  const typing=tag==="input"||tag==="textarea"||(e.target&&e.target.isContentEditable);
+  if(e.ctrlKey && e.shiftKey && e.altKey && (e.key==="a"||e.key==="A")){
+    e.preventDefault();
+    setChallengeBleek(!isChallengeBleek());
+    return;
+  }
+  if(!typing && e.shiftKey && !e.ctrlKey && !e.altKey && (e.key==="v"||e.key==="V")){
+    e.preventDefault();
+    if(typeof openChallengePlayerModal==="function") openChallengePlayerModal();
+  }
+});
 
 function bind(id, fn){ const el=$(id); if(!el){ console.warn("missing #"+id); return; } el.onclick=fn; }
 bind("starterBtn", startStarter);
@@ -3296,7 +4011,7 @@ bind("startItemsBtn", startCombatItems);
 bind("buyItemChargeBtn", buyItemCharge);
 bind("buyProfBtn", openBuyProfession);
 bind("skillValueSave", saveSkillValue);
-bind("skillValuesBtn", ()=>{ if(typeof renderSkillValues==="function") renderSkillValues(); const m=$("skillValuesModal"); if(m) m.classList.add("open"); });
+/* skillValuesBtn moved into Quest Log as Craft Skill Values */
 bind("skillValuesClose", ()=>{ const m=$("skillValuesModal"); if(m) m.classList.remove("open"); });
 const skillValuesModal=$("skillValuesModal");
 if(skillValuesModal) skillValuesModal.onclick=e=>{ if(e.target===skillValuesModal) skillValuesModal.classList.remove("open"); };
@@ -3338,6 +4053,51 @@ bind("rsPickMondain", ()=>{
   window._pendingPreset="mondain";
   showRulesetPreset("mondain");
 });
+bind("rsPickSora", ()=>{
+  window._pendingPreset="sora";
+  showRulesetPreset("sora");
+});
+bind("rsPickTsai", ()=>{
+  window._pendingPreset="tsai";
+  showRulesetPreset("tsai");
+});
+bind("rsPickQuesting", ()=>{
+  window._pendingPreset="questing";
+  showRulesetPreset("questing");
+});
+bind("rsAutoSkillsToggle", ()=>{
+  const on=$("rsAutoSkillsToggle")&&$("rsAutoSkillsToggle").checked;
+  const w=$("rsAutoSkillsWrap");
+  if(w) w.style.display=on?"block":"none";
+  if(on && typeof fillRsAutoSkills==="function") fillRsAutoSkills();
+});
+bind("rsOpenEditValues", ()=>{
+  if(typeof syncEditUI==="function") syncEditUI();
+  const m=$("editModal"); if(m) m.classList.add("open");
+});
+bind("questCraftSkillsBtn", ()=>{
+  if(typeof openSkillValuesModal==="function") openSkillValuesModal();
+});
+bind("questBoardBtn", ()=>{
+  if(typeof openQuestBoard==="function") openQuestBoard();
+});
+bind("challengeCodeCopy", async ()=>{
+  const v=($("challengeCodeDisplay")&&$("challengeCodeDisplay").value)||state.challengeCode||"";
+  if(!v) return showToast("No challenge code");
+  try{ await navigator.clipboard.writeText(v); showToast("Challenge code copied"); }
+  catch{ showToast("Copy failed — select the code manually"); }
+});
+bind("challengePatchBtn", ()=>{ if(typeof applyChallengePatch==="function") applyChallengePatch(); });
+bind("challengePlayerApply", ()=>{ if(typeof applyPlayerChallengeCode==="function") applyPlayerChallengeCode(); });
+bind("challengePlayerClose", ()=>{ const m=$("challengePlayerModal"); if(m) m.classList.remove("open"); });
+const _cpm=$("challengePlayerModal"); if(_cpm) _cpm.onclick=e=>{ if(e.target===_cpm) _cpm.classList.remove("open"); };
+
+bind("skillValuesSaveAll", saveAllSkillValues);
+bind("skillValuesClose", ()=>{ const m=$("skillValuesModal"); if(m) m.classList.remove("open"); });
+bind("questBoardClose", ()=>{ const m=$("questBoardModal"); if(m) m.classList.remove("open"); });
+const _svm=$("skillValuesModal"); if(_svm) _svm.onclick=e=>{ if(e.target===_svm) _svm.classList.remove("open"); };
+const _qbm=$("questBoardModal"); if(_qbm) _qbm.onclick=e=>{ if(e.target===_qbm) _qbm.classList.remove("open"); };
+
 bind("rsChallengeApply", applyChallengeCodeToForm);
 bind("forceStarterGo", runForcedStarter);
 bind("xpRemindClose", closeXpTrackerRemind);
