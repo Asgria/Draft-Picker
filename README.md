@@ -18,8 +18,10 @@ now you can choose how to play
 <img width="897" height="99" alt="beta tester 2" src="https://github.com/user-attachments/assets/34378f14-3e1a-4a95-8ecf-fb3697ad0f21" />
 <img width="898" height="103" alt="custom preset" src="https://github.com/user-attachments/assets/7b995554-c677-474a-8522-986353bc125e" />
 
-after choosing you will be given skills and if you chose it as well item drafts
-<img width="1427" height="616" alt="drafting skills" src="https://github.com/user-attachments/assets/1ce4e20a-0ba1-41ed-a1e4-ea1e059739bc" /> 
-item draft
-<img width="1066" height="591" alt="item draft - unpacked" src="https://github.com/user-attachments/assets/f80f05e9-0214-4f47-90f0-ff9dd85985ec" />
+after choosing you will be given skills
+(if you chose to have limited starter rolls, you can see in the red circle)
+<img width="1427" height="616" alt="drafting skills" src="https://github.com/user-attachments/assets/56eacb15-bbe8-4c26-b20b-aa2c454b3e9b" />
+if you chose it as well item drafts
+(if you chose to have limited starter rolls, you can see in the red circle)
+<img width="1066" height="591" alt="item draft - unpacked" src="https://github.com/user-attachments/assets/2035004a-a775-423c-9311-a889f78dd21d" />
 
