@@ -19,5 +19,6 @@ now you can choose how to play
 <img width="898" height="103" alt="custom preset" src="https://github.com/user-attachments/assets/7b995554-c677-474a-8522-986353bc125e" />
 
 after choosing you will be given skills and if you chose it as well item drafts
-<img width="1427" height="616" alt="drafting skills" src="https://github.com/user-attachments/assets/1ce4e20a-0ba1-41ed-a1e4-ea1e059739bc" /> <img width="1066" height="591" alt="item draft - unpacked" src="https://github.com/user-attachments/assets/f80f05e9-0214-4f47-90f0-ff9dd85985ec" />
+<img width="1427" height="616" alt="drafting skills" src="https://github.com/user-attachments/assets/1ce4e20a-0ba1-41ed-a1e4-ea1e059739bc" /> 
+<img width="1066" height="591" alt="item draft - unpacked" src="https://github.com/user-attachments/assets/f80f05e9-0214-4f47-90f0-ff9dd85985ec" />
 
