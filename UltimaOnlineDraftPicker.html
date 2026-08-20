@@ -59,7 +59,7 @@
       position:fixed;inset:0;z-index:200;background:radial-gradient(ellipse at 50% 20%,#1a1a28 0%,#0f0f13 55%,#0a0a0e 100%);
       display:flex;align-items:center;justify-content:center;padding:1.5rem;
     }
-    .landing.hidden{display:none}
+    .landing.hidden{display:none !important}
     .landing-card{
       width:100%;max-width:480px;background:#16161d;border:1px solid #2a2a35;border-radius:18px;
       padding:1.6rem 1.5rem 1.4rem;box-shadow:0 20px 50px rgba(0,0,0,.45);
@@ -78,10 +78,6 @@
     .landing-new{display:flex;gap:.5rem;flex-wrap:wrap}
     .landing-new input{flex:1;min-width:140px;background:#1c1c24;border:1px solid #333;color:#e8e8ed;padding:.55rem .7rem;border-radius:10px}
     .landing-new button{background:#00b894;color:#fff;border:none;padding:.55rem 1rem;border-radius:10px;font-weight:600;cursor:pointer}
-    #githubBtn{background:#24292f;color:#e6edf3;border:1px solid #3d444d}
-    #githubBtn:hover{background:#32383f}
-    .link-modal code{display:block;word-break:break-all;background:#0d1117;border:1px solid #30363d;padding:.65rem .75rem;border-radius:8px;font-size:.8rem;color:#58a6ff;margin:.75rem 0}
-    .link-modal p{font-size:.88rem;color:#bbb;line-height:1.5;margin-bottom:.55rem}
     h1{font-size:1.8rem;margin-bottom:.3rem;letter-spacing:-.02em}
     p.sub{color:#888;margin-bottom:1.3rem;font-size:.9rem;text-align:center;max-width:560px;line-height:1.45}
     .controls{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1rem}
@@ -231,7 +227,6 @@
     <button id="modBtn" data-challenge-lock title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
     <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
     <button id="homeBtnTop" title="Return to character select landing" style="background:#2d2d38;color:#ccc;border:1px solid #3d3d4a">Characters</button>
-    <button id="githubBtn" title="Python XP / avatar coin tracker for in-game use">XP Tracker Script</button>
     <button id="export" title="Export only the currently active save slot as JSON">Export Save</button>
     <label class="file-btn" title="Import JSON into the currently active save slot only">Import Save<input type="file" id="import" accept=".json,application/json"></label>
     <button id="deathReset" title="Return drafted skills/items to the pool and restore Generate charges from your level">Death Reset</button>
@@ -243,14 +238,28 @@
     <h2>Level &amp; Experience</h2>
     <div class="xp-row"><span>Level <strong id="levelDisplay">1</strong> / 100</span><span id="xpText">0 / 500 XP</span></div>
     <div class="xp-bar"><div id="xpBarFill" style="width:0%"></div></div>
-    <div class="total-xp">Total XP earned: <strong id="totalXpDisplay">0</strong></div>
-    <div class="total-xp" id="coinsDisplayRow" style="display:none">Total Coins earned: <strong id="totalCoinsDisplay">0</strong></div>
-    <div class="total-xp" id="spendableCoinsRow" style="display:none">Spendable Coins: <strong id="spendableCoinsDisplay">0</strong></div>
-    <div class="xp-add">
-      <input type="number" id="xpInput" min="1" placeholder="XP gained this session">
-      <button id="addXpBtn" title="Add session XP toward leveling and Generate charges">Add XP</button>
+    <div class="xp-breakdown" style="font-size:.8rem;color:#888;line-height:1.55;margin:.55rem 0 .65rem">
+      <div>Total XP earned: <strong id="totalXpDisplay" style="color:#aaa">0</strong></div>
+      <div>XP earned in-game: <strong id="xpIngameDisplay" style="color:#74b9ff">0</strong></div>
+      <div>XP earned from quests: <strong id="xpQuestsDisplay" style="color:#00b894">0</strong></div>
+      <div id="coinsBreakdown" style="display:none;margin-top:.45rem;padding-top:.45rem;border-top:1px solid #2a2a35">
+        <div>Coins earned in-game: <strong id="coinsIngameDisplay" style="color:#74b9ff">0</strong></div>
+        <div>Coins earned from quests: <strong id="coinsQuestsDisplay" style="color:#00b894">0</strong></div>
+        <div>Spendable Coins: <strong id="spendableCoinsDisplay" style="color:#f1c40f">0</strong></div>
+      </div>
     </div>
-    <p style="font-size:.78rem;color:#666;margin-top:.5rem">XP scales with level &amp; prestige. Generate charges from leveling (interval set in Modifiers).</p>
+    <div class="xp-add" style="flex-wrap:wrap">
+      <input type="number" id="xpInput" min="0" placeholder="Avatar lifetime coins (total)" title="Enter the lifetime total from your character sheet, not a session gain">
+      <button id="addXpBtn" title="Apply the difference since your last lifetime report as in-game XP (1:1 coins)">Report Lifetime</button>
+    </div>
+    <p style="font-size:.75rem;color:#666;margin-top:.45rem;line-height:1.45">
+      Enter your <strong>avatar lifetime coin total</strong> (MobileUO / paperdoll). The app records only the <em>increase</em> since last report.
+      Last reported: <strong id="lastLifetimeDisplay">0</strong>
+    </p>
+    <details style="margin-top:.5rem;font-size:.75rem;color:#777">
+      <summary style="cursor:pointer;color:#888">Lifetime report history</summary>
+      <div id="lifetimeHistoryList" style="margin-top:.35rem;max-height:120px;overflow-y:auto;line-height:1.5"></div>
+    </details>
   </div>
   <div id="challengeBanner" style="display:none;width:100%;max-width:520px;text-align:center;margin:0 auto .85rem;padding:.55rem .9rem;background:linear-gradient(90deg,#2a1f0a,#1c1c24);border:1px solid #c9a227;border-radius:12px;color:#f1c40f;font-weight:800;letter-spacing:.14em;font-size:1.05rem;">CHALLENGE</div>
   <div class="starter-bar" id="starterBar">
@@ -349,8 +358,12 @@
       <input type="number" id="editLevel" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Current XP (toward next level)</strong>
       <input type="number" id="editXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
-    <div class="mod-row"><div style="flex:1"><strong>Total XP earned</strong>
-      <input type="number" id="editTotalXp" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>XP earned in-game</strong>
+      <input type="number" id="editXpIngame" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>XP earned from quests</strong>
+      <input type="number" id="editXpQuests" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
+    <div class="mod-row"><div style="flex:1"><strong>Last lifetime report</strong><div class="sub">Avatar lifetime total last entered</div>
+      <input type="number" id="editLastLifetime" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Reroll tokens</strong>
       <input type="number" id="editRerolls" min="0" value="0" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Prestige count</strong>
@@ -402,15 +415,15 @@
   </div><footer><button id="banClose">Close</button></footer></div></div>
 
   <div class="modal-overlay" id="modModal"><div class="modal"><header>Modifiers</header><div class="body">
-    <div class="mod-row"><input type="checkbox" id="modIgnorePrereq"><div><strong>Ignore prerequisites</strong><div class="sub">All cards can appear regardless of prereqs</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modRequirePrereq"><div><strong>Require prerequisites</strong><div class="sub">Off by default (all skills can appear). When on, gated skills need their prereq drafted first.</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modCustomInterval"><div><strong>Custom generate interval</strong><div class="sub">Levels between Generate charge awards</div>
       <input type="number" id="modInterval" min="1" value="4" style="margin-top:.35rem"> levels</div></div>
     <div class="mod-row"><div style="flex:1"><strong>Charges per award</strong><div class="sub">How many Generate charges you gain each interval (default 1)</div>
       <input type="number" id="modChargesPer" min="1" value="1" style="margin-top:.35rem;width:100%"></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Max level</strong><div class="sub">Default 100 — prestige unlocks at this level</div>
       <input type="number" id="modMaxLevel" min="2" value="100" style="margin-top:.35rem;width:100%"></div></div>
-    <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited</div>
-      <input type="number" id="modStarterMax" min="1" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
+    <div class="mod-row"><input type="checkbox" id="modStarterLimit"><div><strong>Limit Starter Rerolls</strong><div class="sub">Caps “Reroll Unlocked” uses. Blank = unlimited. Use <strong>0</strong> for no rerolls.</div>
+      <input type="number" id="modStarterMax" min="0" placeholder="∞" style="margin-top:.35rem"> max rerolls</div></div>
     <div class="mod-row"><input type="checkbox" id="modItemDraft"><div><strong>Enable Item Draft</strong><div class="sub">Without gold: shares skill generate charges &amp; charge every 2 levels. With gold: buy item charges for 500 coins.</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modSkillItems"><div><strong>Skill-unlocked items</strong><div class="sub">When on, drafting a skill (e.g. Alchemy) adds its items to the item pool. Off = ignore SKILL_ITEMS entirely.</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modGoldItems"><div><strong>Spend gold for item rolls</strong><div class="sub">XP deposits coins 1:1. Buy Generate charges for items at 500 coins. Quests deposit 25% of entered XP as coins.</div></div></div>
@@ -454,13 +467,6 @@
     <div id="customResult" style="margin-top:.7rem;font-size:1.05rem;color:#00cec9;font-weight:600;min-height:1.3rem"></div>
   </div><footer><button id="customClose">Close</button></footer></div></div>
 
-  <div class="modal-overlay link-modal" id="githubModal"><div class="modal"><header>XP Tracker Script</header><div class="body">
-    <p>This python script is used to track your avatar coin gains as the xp used in this program it runs in tazuo and you can directly copy paste it from the GitHub without downloading it.</p>
-    <p>Open the link yourself when ready:</p>
-    <code id="githubLinkText">https://github.com/Asgria/memento---avatar-coin-tracker---python</code>
-    <p style="font-size:.8rem;color:#888">Copy the URL above, or use the button to copy it to your clipboard. This does not open a new tab automatically.</p>
-    <button type="button" id="githubCopyBtn" style="background:#238636;color:#fff;width:100%;justify-content:center;margin-top:.35rem">Copy link</button>
-  </div><footer><button id="githubClose">Close</button></footer></div></div>
 
 <div class="ruleset-overlay" id="rulesetOverlay">
   <div class="ruleset-box">
@@ -475,7 +481,7 @@
       <button type="button" class="landing-slot" id="rsPickMondain" style="cursor:pointer;text-align:left;width:100%;border:1px solid #3d3420;background:#1a1814;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
         <strong style="color:#c9a227">Kenzard's Mondain Madness</strong>
         <div class="meta" style="margin-top:.25rem;color:#b8a88a">The Madness of Mondain has spread to you</div>
-        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">Unlimited starter skill rerolls · generate charge every 2 levels · ignore all skill prerequisites. The original concept for this draft mode.</div>
+        <div style="font-size:.8rem;color:#8a7f6a;margin-top:.4rem;line-height:1.45">0 starter skill rerolls · charge every 2 levels · no prereq gate · quests enabled · 30 min task cooldown. The original concept for this draft mode.</div>
       </button>
       <button type="button" class="landing-slot" id="rsPickSora" style="cursor:pointer;text-align:left;width:100%;border:1px solid #5a2a4a;background:#1a1218;color:#e8e8ed;padding:.9rem 1rem;border-radius:12px">
         <strong style="color:#e84393">Sora's Fisting Adventurer</strong>
@@ -498,8 +504,8 @@
     <div class="ruleset-body">
       <div class="ruleset-opts">
         <div class="mod-row">
-          <input type="checkbox" id="rsIgnorePrereq" title="Certain skills require to be selected before you can take them example: Lumberjacking to see Bowcraft and or carpentry. Check mark this to ignore this feature">
-          <div><strong title="Certain skills require to be selected before you can take them example: Lumberjacking to see Bowcraft and or carpentry. Check mark this to ignore this feature">Ignore prerequisites</strong>
+          <input type="checkbox" id="rsRequirePrereq" title="Certain skills require to be selected before you can take them example: Lumberjacking to see Bowcraft and or carpentry. Check to enforce skill prerequisites (off = all skills can appear)">
+          <div><strong title="Certain skills require to be selected before you can take them example: Lumberjacking to see Bowcraft and or carpentry. Check to enforce skill prerequisites (off = all skills can appear)">Require prerequisites</strong>
             <div class="sub">Skills normally gated by another skill can appear anytime</div>
           </div>
         </div>
@@ -507,7 +513,7 @@
           <input type="checkbox" id="rsStarterLimit">
           <div><strong>Limit starter rerolls</strong>
             <div class="sub">Cap how many times you can reroll unlocked starter cards</div>
-            <input type="number" id="rsStarterMax" min="1" value="10" style="margin-top:.35rem;width:80px" title="Max starter rerolls">
+            <input type="number" id="rsStarterMax" min="0" value="10" style="margin-top:.35rem;width:80px" title="Max starter rerolls (0 = none)">
           </div>
         </div>
         <div class="mod-row">
@@ -659,16 +665,6 @@
     <input type="text" id="gcOutput" readonly style="width:100%;background:#0d0d12;border:1px solid #333;color:#58a6ff;padding:.55rem;border-radius:8px;font-size:.9rem">
     <button type="button" id="gcCopyBtn" style="background:#238636;color:#fff;width:100%;justify-content:center;margin-top:.45rem">Copy code</button>
   </div><footer><button id="gcClose">Close</button></footer></div></div>
-<div class="modal-overlay" id="xpTrackerRemindModal"><div class="modal" style="max-width:460px"><header>XP Tracker required</header><div class="body">
-    <p style="font-size:.92rem;color:#ccc;line-height:1.5;margin-bottom:.75rem">To continue tracking progress, use the <strong>XP Tracker</strong> Python script in-game (Tazuo). It tracks avatar coin gains used as XP in this app.</p>
-    <p style="font-size:.85rem;color:#888;line-height:1.45;margin-bottom:.85rem">You can copy the GitHub link without leaving this page.</p>
-    <code style="display:block;word-break:break-all;background:#0d1117;border:1px solid #30363d;padding:.65rem .75rem;border-radius:8px;font-size:.78rem;color:#58a6ff;margin-bottom:.75rem">https://github.com/Asgria/memento---avatar-coin-tracker---python</code>
-    <button type="button" id="xpRemindCopy" style="background:#238636;color:#fff;width:100%;justify-content:center;margin-bottom:.65rem">Copy GitHub link</button>
-    <label style="display:flex;align-items:flex-start;gap:.5rem;font-size:.85rem;color:#aaa;cursor:pointer">
-      <input type="checkbox" id="xpRemindDisable" style="margin-top:.15rem">
-      <span>Don't show this after Starter Draft again on this character</span>
-    </label>
-  </div><footer><button id="xpRemindClose" class="primary" style="background:#6c5ce7;color:#fff;border:none;padding:.5rem 1rem;border-radius:8px;cursor:pointer">Got it</button></footer></div></div>
 <div class="toast" id="toast"></div>
 <script>
 // ============================================================
@@ -749,24 +745,24 @@ const RULESET_PRESETS = {
   mondain: {
     name: "Kenzard's Mondain Madness",
     description: "The Madness of Mondain has spread to you",
-    blurb: "Unlimited starter skill rerolls · generate charge every 2 levels · ignore all skill prerequisites. The original concept for this draft mode.",
+    blurb: "0 starter skill rerolls · generate charge every 2 levels · no prereq requirements · quests on · 30 min task cooldown. The original concept for this draft mode.",
     autoSkills: [],
     bans: {},
     starterItemAllow: [],
     mods: {
-      ignorePrereqs: true,
+      requirePrereqs: false,
       customInterval: true,
       levelsPerCharge: 2,
       chargesPerAward: 1,
       maxLevel: 100,
-      starterLimitOn: false,
-      starterMax: null,
+      starterLimitOn: true,
+      starterMax: 0,
       itemDraft: false,
       itemMode: "packed",
       skillItems: false,
       draftReroll: false,
-      questsEnabled: false,
-      questCooldownMinutes: 60,
+      questsEnabled: true,
+      questCooldownMinutes: 30,
       goldItems: false,
       professions: false,
       gatherSkill: "Mining",
@@ -798,7 +794,7 @@ const RULESET_PRESETS = {
     },
     starterItemAllow: ["Pugilist Gloves", "Throwing Gloves"],
     mods: {
-      ignorePrereqs: true,
+      requirePrereqs: false,
       customInterval: false,
       levelsPerCharge: 4,
       chargesPerAward: 1,
@@ -828,7 +824,7 @@ const RULESET_PRESETS = {
     bans: {},
     starterItemAllow: [],
     mods: {
-      ignorePrereqs: false,
+      requirePrereqs: false,
       customInterval: true,
       levelsPerCharge: 1,
       chargesPerAward: 1,
@@ -858,7 +854,7 @@ const RULESET_PRESETS = {
     bans: {},
     starterItemAllow: [],
     mods: {
-      ignorePrereqs: false,
+      requirePrereqs: false,
       customInterval: true,
       levelsPerCharge: 2,
       chargesPerAward: 1,
@@ -1034,7 +1030,8 @@ const COMBAT_STARTER_ITEMS = {
 // ============================================================
 //  QUESTS — easy to expand
 //  MONSTER_POOL: kill targets (level, optional requiresPrestige).
-//  Rewards: rewardPct (session XP %), rewardXp (static XP) — use either or both.
+//  Kill reward: ceil(rewardXp * count/100) where count is rolled kills (min–max).
+//  rewardXp = base (e.g. 3000). If only rewardPct is set, base defaults to pct*10000 (0.30 → 3000).
 //  CRAFT_QUESTS: still need requires + optional minSkill/maxSkill (0-125)
 //  NPC_QUESTS: tribute quests (minLevel, requiresPrestige, rewardXp editable)
 // ============================================================
@@ -1522,19 +1519,19 @@ function expandCraftQuests(){
 const CRAFT_QUESTS = expandCraftQuests();
 
 const NPC_QUESTS = [
-  { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Geoffry", name: "Geoffrey the Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Geoffry", name: "Gwenno the Bard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Iolo", name: "Iolo the Bowman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Katrina", name: "Katrina the Shepherd", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Jaana", name: "Jaana The Herb Healer", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_JMorsGotha", name: "Mors Gotha the Death Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Minax", name: "Minax the Enchantress", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Seggallion", name: "Seggallion The Pirate Lord", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_guardian", name: "The Guardian", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Shamino", name: "Shamino the Woodsman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_nystal", name: "Nystal the royal wizard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
-  { id: "npc_Stefano", name: "Stefano the Sneak", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 1, requiresPrestige: false },
+  { id: "npc_british", name: "Lord British", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Geoffry", name: "Geoffrey the Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Gwenno", name: "Gwenno the Bard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Iolo", name: "Iolo the Bowman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Katrina", name: "Katrina the Shepherd", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Jaana", name: "Jaana The Herb Healer", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_JMorsGotha", name: "Mors Gotha the Death Knight", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Minax", name: "Minax the Enchantress", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Seggallion", name: "Seggallion The Pirate Lord", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_guardian", name: "The Guardian", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Shamino", name: "Shamino the Woodsman", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_nystal", name: "Nystal the royal wizard", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
+  { id: "npc_Stefano", name: "Stefano the Sneak", description: "Complete this npc's tribute quest", rewardXp: 2000, minLevel: 50, requiresPrestige: false },
   { id: "npc_draxinusom", name: "Lord Draxinusom the Gargoyle King", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
   { id: "npc_EarthSerpent", name: "the Great Earth Serpent", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
   { id: "npc_Morphius", name: "Morphius the Vile Lich", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true },
@@ -1550,12 +1547,37 @@ const NPC_QUESTS = [
   { id: "npc_Lethe", name: "Lethe the Dreaded Lich", description: "Complete this npc's tribute quest", rewardXp: 5000, minLevel: 1, requiresPrestige: true }
 ];
 
+
+// Pity quests — only when the character has NO combat and NO crafting skills drafted
+const PITY_QUESTS = [
+  { id: "pity_birds", title: "Kill birds", description: "Thin the flocks — any bird will do. A humble start for those without a trade or weapon skill.", rewardXp: 500 },
+  { id: "pity_kindling", title: "Gather kindling", description: "Collect kindling from the wild. No craft skill required — just work the land.", rewardXp: 500 },
+  { id: "pity_gold", title: "Make 1,000 gold", description: "Earn 1,000 gold by any honest (or clever) means. Prove you can survive.", rewardXp: 500 }
+];
+function isPityEligible(){
+  const skills = typeof playerSkills==="function" ? playerSkills() : new Set(state.picked||[]);
+  const combat = (typeof COMBAT_SKILLS!=="undefined"?COMBAT_SKILLS:[]);
+  const craft = (typeof CRAFT_SKILLS!=="undefined"?CRAFT_SKILLS:[]);
+  if(combat.some(s=>skills.has(s))) return false;
+  if(craft.some(s=>skills.has(s))) return false;
+  return true;
+}
+
 const GOLDEN_PACK_CHANCE = 0.15;
 const FREE_PICK_CHANCE = 0.15; // unpacked: chance a pack golden card appears in a roll
 const PROFESSION_SLOT_COST = 10000;
 
-const QUEST_CHAIN_BONUS_AT = 10; // streak needed
-const QUEST_CHAIN_BONUS_MULT = 1.5; // +50% at streak
+// Chain never resets on success — milestone bonuses on the Nth completion
+// every 10th +65%, 50th +90%, 100th +150%, 250th +300%, 1000th +700%
+const QUEST_CHAIN_MILESTONES = [
+  { every: 1000, bonus: 7.00 },
+  { every: 250,  bonus: 3.00 },
+  { every: 100,  bonus: 1.50 },
+  { every: 50,   bonus: 0.90 },
+  { every: 10,   bonus: 0.65 }
+];
+const QUEST_CHAIN_BONUS_AT = 10; // legacy label in UI
+const QUEST_CHAIN_BONUS_MULT = 1.65; // legacy fallback
 
 const WEIGHTED_CHANCE = 0.15;
 const MAX_MILESTONE_SLOTS = 5;
@@ -1573,11 +1595,11 @@ const FREE_PICK = "Free Pick";
 let state = {
   remaining:[], picked:[], bans:{},
   milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
-  unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+  unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
   generateCharges:0, itemCharges:0, chargesSpent:0, itemChargesSpent:0, levelsSinceReward:0,
   starterUses:0, starterItemUses:0,
   mods:{
-    ignorePrereqs:false,
+    requirePrereqs:false,
     customInterval:false,
     levelsPerCharge:4,
     chargesPerAward:1,
@@ -1594,8 +1616,12 @@ let state = {
   questCooldownUntil:0,
   questChoices:null, // up to 3 offered quests before picking one
   totalCoins:0,
+  coinsIngame:0,
+  coinsQuests:0,
   spendableCoins:0,
   coinsSpent:0,
+  lastLifetimeReport:0,
+  lifetimeHistory:[],
   starterToken:true,
   starterItemToken:true,
   itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
@@ -1612,9 +1638,17 @@ let pendingSelect=null; // {item, cardEl, kind}
 const $=id=>document.getElementById(id);
 const on=(id,ev,fn)=>{const el=$(id); if(el) el[ev]=fn;};
 const cardsEl=$("cards"), toastEl=$("toast"), modal=$("pickModal");
+function setCardsHtml(html){ if(cardsEl) cardsEl.innerHTML=html; }
+function clearCards(){ if(cardsEl) cardsEl.innerHTML=""; }
+
 
 function shuffle(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
-function showToast(m){toastEl.textContent=m;toastEl.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>toastEl.classList.remove("show"),2400);}
+function showToast(m){
+  const el=toastEl||$("toast");
+  if(!el){ try{ console.log("[toast]", m); }catch(e){} return; }
+  el.textContent=m; el.classList.add("show");
+  clearTimeout(showToast._t); showToast._t=setTimeout(()=>el.classList.remove("show"),2400);
+}
 
 function normalizeChance(v, fallback){
   if(v==null || v==="") return fallback;
@@ -1656,7 +1690,7 @@ function packForItem(itemName){
 }
 function hasPrereq(i){return PREREQS[i]&&PREREQS[i].length>0;}
 function prereqsMet(i){
-  if(state.mods.ignorePrereqs) return true;
+  if(!state.mods.requirePrereqs) return true;
   if(!hasPrereq(i)) return true;
   return PREREQS[i].some(r=>state.picked.includes(r));
 }
@@ -1755,7 +1789,7 @@ function buildPool(ctx, applyW, exclude){
     if(item!==FREE_PICK&&!prereqsMet(item)) continue;
     if(item!==FREE_PICK&&isBlockedByProfession(item)) continue;
     if(exclude&&exclude.has(item)) continue;
-    const gated=hasPrereq(item)&&!(state.mods&&state.mods.ignorePrereqs);
+    const gated=hasPrereq(item)&&!!(state.mods&&state.mods.requirePrereqs);
     if(gated && item!==FREE_PICK) smartCandidates.push(item);
     if(gated&&applyW){
       if(wChance>=1 || Math.random()<wChance) pool.push({name:item,weighted:true});
@@ -1775,7 +1809,7 @@ function buildPool(ctx, applyW, exclude){
 }
 function ensureWeightedInHand(cards){
   if(!cards||!cards.length) return cards;
-  if(state.mods&&state.mods.ignorePrereqs) return cards;
+  if(!(state.mods&&state.mods.requirePrereqs)) return cards;
   const wChance=weightedPrereqChance();
   const sChance=smartPrereqChance();
   if(wChance<=0 && sChance<=0) return cards;
@@ -1869,7 +1903,8 @@ function updateStatus(){
     }
     if(parts.length) extra=` · `+parts.join(" · ");
   }
-  $("status").innerHTML=`Save: <strong>${activeSaveName}</strong> · Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong>${extra}`;
+  const statusEl=$("status");
+  if(statusEl) statusEl.innerHTML=`Save: <strong>${activeSaveName}</strong> · Remaining: <strong>${real}</strong> · Picked: <strong>${state.picked.length}</strong> · Prestiged: <strong>${state.prestige}</strong> · Rerolls: <strong>${state.rerolls}</strong>${extra}`;
   const maxL=maxLevel();
   const ld=$("levelDisplay");
   if(ld){
@@ -1883,17 +1918,23 @@ function updateStatus(){
   }
 
   const need=xpRequired();
-  $("xpText").textContent=`${state.xp} / ${need} XP`;
-  $("xpBarFill").style.width=Math.min(100,(state.xp/need)*100)+"%";
-  $("totalXpDisplay").textContent=state.totalXp.toLocaleString();
+  const xpTextEl=$("xpText"); if(xpTextEl) xpTextEl.textContent=`${state.xp} / ${need} XP`;
+  const xpBar=$("xpBarFill"); if(xpBar) xpBar.style.width=Math.min(100,(state.xp/need)*100)+"%";
+  state.totalXp=(state.xpIngame||0)+(state.xpQuests||0);
+  state.totalCoins=(state.coinsIngame||0)+(state.coinsQuests||0);
+  if($("totalXpDisplay")) $("totalXpDisplay").textContent=(state.totalXp||0).toLocaleString();
+  if($("xpIngameDisplay")) $("xpIngameDisplay").textContent=(state.xpIngame||0).toLocaleString();
+  if($("xpQuestsDisplay")) $("xpQuestsDisplay").textContent=(state.xpQuests||0).toLocaleString();
+  if($("lastLifetimeDisplay")) $("lastLifetimeDisplay").textContent=(state.lastLifetimeReport||0).toLocaleString();
   const goldOn=!!(state.mods&&state.mods.goldItems);
   const coinsOn=typeof coinsEnabled==="function"?coinsEnabled():goldOn;
   const itemOn=!!(state.mods&&state.mods.itemDraft);
-  const cdr=$("coinsDisplayRow"), scr=$("spendableCoinsRow");
-  if(cdr) cdr.style.display=coinsOn?"block":"none";
-  if(scr) scr.style.display=coinsOn?"block":"none";
-  if($("totalCoinsDisplay")) $("totalCoinsDisplay").textContent=(state.totalCoins||0).toLocaleString();
+  const cb=$("coinsBreakdown");
+  if(cb) cb.style.display=coinsOn?"block":"none";
+  if($("coinsIngameDisplay")) $("coinsIngameDisplay").textContent=(state.coinsIngame||0).toLocaleString();
+  if($("coinsQuestsDisplay")) $("coinsQuestsDisplay").textContent=(state.coinsQuests||0).toLocaleString();
   if($("spendableCoinsDisplay")) $("spendableCoinsDisplay").textContent=(state.spendableCoins||0).toLocaleString();
+  if(typeof renderLifetimeHistory==="function") renderLifetimeHistory();
   if(state.level>=maxLevel()) $("prestigeBtn").classList.add("show"); else $("prestigeBtn").classList.remove("show");
   const skillCh=state.generateCharges|0;
   const itemCh=state.itemCharges|0;
@@ -1940,7 +1981,8 @@ function updateStatus(){
   // Hide whole starter control strip when neither skill nor item starter is available mid-session
   // (starterBar itself only shows while active)
 
-  $("slotCountLabel").textContent=`(${state.milestones.filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
+  const scl=$("slotCountLabel");
+  if(scl) scl.textContent=`(${(state.milestones||[]).filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
   const imp=$("itemMilestonePanel"); if(imp) imp.style.display=itemOn?"":"none";
   const bp=$("buyProfBtn");
   if(bp){
@@ -2079,6 +2121,9 @@ function applyChallengePatch(){
 }
 function renderPicked(){
   const el=$("pickedList");
+  if(!el) return;
+  if(!Array.isArray(state.picked)) state.picked=[];
+  if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
   const all=[...state.picked.map(i=>({n:i,t:"skill"})),...state.itemPicked.map(i=>({n:i,t:"item"}))];
   if(!all.length){el.innerHTML=`<span class="no-picked">Nothing picked yet</span>`;return;}
   const canRefund=!!(state.mods&&state.mods.draftReroll);
@@ -2114,19 +2159,22 @@ function refundDrafted(kind, name){
 }
 function cloneState(){ return JSON.parse(JSON.stringify(state)); }
 function normalizeState(data){
-  if(!data||!Array.isArray(data.remaining)||!Array.isArray(data.picked)) return null;
+  if(!data || typeof data!=="object") return null;
+  // Repair older / partial saves instead of rejecting them
+  if(!Array.isArray(data.remaining)) data.remaining=[];
+  if(!Array.isArray(data.picked)) data.picked=[];
   const s = Object.assign({
     remaining:[], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
-    unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+    unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
-    mods:{ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
+    mods:{requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
     itemRemaining:[], itemPicked:[]
   }, data);
   while(s.milestones.length<MAX_MILESTONE_SLOTS) s.milestones.push(null);
   s.milestones=s.milestones.slice(0,MAX_MILESTONE_SLOTS);
   if(!s.mods) s.mods={};
-  s.mods = Object.assign({ignorePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15}, s.mods);
+  s.mods = Object.assign({requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15}, s.mods);
   if(!Array.isArray(s.itemRemaining)) s.itemRemaining=defaultItemPool(s.mods.itemMode||"packed");
   if(!Array.isArray(s.itemPicked)) s.itemPicked=[];
   if(typeof s.chargesSpent!=="number") s.chargesSpent=0;
@@ -2136,6 +2184,13 @@ function normalizeState(data){
   if(typeof s.mods.questCooldownMinutes!=="number") s.mods.questCooldownMinutes=60;
   if(typeof s.mods.skipPenalty!=="boolean") s.mods.skipPenalty=false;
   if(typeof s.mods.skipPenaltyMinutes!=="number") s.mods.skipPenaltyMinutes=15;
+  if(typeof s.mods.requirePrereqs!=="boolean"){
+    // Legacy requirePrereqs: true meant no gate; false meant gated
+    if(typeof s.mods.ignorePrereqs==="boolean") s.mods.requirePrereqs = !s.mods.ignorePrereqs;
+    else s.mods.requirePrereqs = false;
+  }
+  delete s.mods.ignorePrereqs;
+
   // Questing Only saves created before the flag existed
   if(s.rulesetName==="questing"){
     s.mods.skipPenalty=true;
@@ -2169,6 +2224,22 @@ function normalizeState(data){
   s.mods.freePickChance=normalizeChance(s.mods.freePickChance, 0.15);
   s.mods.smartPrereqChance=normalizeChance(s.mods.smartPrereqChance, 0.15);
   s.mods.weightedChance=normalizeChance(s.mods.weightedChance, 0.15);
+  if(typeof s.xpIngame!=="number") s.xpIngame=0;
+  if(typeof s.xpQuests!=="number") s.xpQuests=0;
+  if(typeof s.coinsIngame!=="number") s.coinsIngame=0;
+  if(typeof s.coinsQuests!=="number") s.coinsQuests=0;
+  if(typeof s.lastLifetimeReport!=="number") s.lastLifetimeReport=0;
+  if(!Array.isArray(s.lifetimeHistory)) s.lifetimeHistory=[];
+  // Legacy: single totalXp → treat as in-game baseline
+  if((s.xpIngame||0)===0 && (s.xpQuests||0)===0 && (s.totalXp||0)>0){
+    s.xpIngame=s.totalXp;
+    if(!s.lastLifetimeReport) s.lastLifetimeReport=s.totalXp;
+  }
+  if((s.coinsIngame||0)===0 && (s.coinsQuests||0)===0 && (s.totalCoins||0)>0){
+    s.coinsIngame=s.totalCoins;
+  }
+  s.totalXp=(s.xpIngame||0)+(s.xpQuests||0);
+  s.totalCoins=(s.coinsIngame||0)+(s.coinsQuests||0);
   return s;
 }
 function readSavesStore(){
@@ -2176,10 +2247,25 @@ function readSavesStore(){
     const raw=localStorage.getItem(SAVES_KEY);
     if(raw){
       const store=JSON.parse(raw);
-      if(store&&store.slots&&typeof store.slots==="object") return store;
+      if(store&&store.slots&&typeof store.slots==="object"){
+        const cleaned={ active: store.active||null, slots:{} };
+        Object.keys(store.slots).forEach(k=>{
+          if(store.slots[k] && typeof store.slots[k]==="object") cleaned.slots[k]=store.slots[k];
+        });
+        return cleaned;
+      }
     }
-  }catch{}
-  return { active:"Default", slots:{} };
+  }catch(e){ try{ console.warn("readSavesStore", e); }catch(e2){} }
+  try{
+    const legacy=localStorage.getItem(STORAGE_KEY);
+    if(legacy){
+      const data=JSON.parse(legacy);
+      if(data && typeof data==="object"){
+        return { active:"Default", slots:{ Default: data } };
+      }
+    }
+  }catch(e){}
+  return { active:null, slots:{} };
 }
 function writeSavesStore(store){
   localStorage.setItem(SAVES_KEY, JSON.stringify(store));
@@ -2220,14 +2306,21 @@ function switchSave(name){
   if(!name) return;
   const store=readSavesStore();
   if(!store.slots[name]) return showToast("Save not found");
-  // persist current first
-  store.slots[activeSaveName]=cloneState();
+  // persist current first (if we have a valid state)
+  try{
+    if(activeSaveName && state && store.slots[activeSaveName]) store.slots[activeSaveName]=cloneState();
+  }catch(e){}
   activeSaveName=name;
   store.active=name;
+  const n=normalizeState(store.slots[name]);
+  if(!n){
+    showToast("Save data invalid: "+name);
+    return;
+  }
+  state=n;
   writeSavesStore(store);
-  state=normalizeState(store.slots[name]);
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
-  renderAll();
+  try{ renderAll(); }catch(e){ try{ console.error(e); }catch(e2){} }
   showToast("Loaded: "+name);
 }
 function createSave(name){
@@ -2244,7 +2337,7 @@ function createSave(name){
   const fresh=normalizeState({
     remaining:[...MASTER_LIST], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
-    unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+    unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
     mods:JSON.parse(JSON.stringify(state.mods)),
     itemRemaining:defaultItemPool((state.mods&&state.mods.itemMode)||"packed"),
@@ -2293,17 +2386,26 @@ function renameSave(oldName, newName){
 
 function hideLanding(){
   const el=$("landing");
-  if(el) el.classList.add("hidden");
+  if(el){
+    el.classList.add("hidden");
+    el.style.display="none"; // clear any inline flex from showLanding
+  }
 }
 function showLanding(){
-  const el=$("landing");
-  if(el) el.classList.remove("hidden");
-  renderLandingList();
+  try{
+    const el=$("landing");
+    if(el){
+      el.classList.remove("hidden");
+      el.style.display="flex";
+    }
+    renderLandingList();
+  }catch(e){ try{ console.error("showLanding", e); }catch(e2){} }
 }
 function renderLandingList(){
-  const store=readSavesStore();
   const el=$("landingList");
   if(!el) return;
+  let store;
+  try{ store=readSavesStore(); }catch(e){ store={slots:{}}; }
   const names=Object.keys(store.slots||{}).sort((a,b)=>a.localeCompare(b));
   if(!names.length){
     el.innerHTML=`<p style="color:#666;font-size:.9rem;text-align:center;padding:.5rem 0">No characters yet — create one below.</p>`;
@@ -2344,9 +2446,14 @@ function renderLandingList(){
 }
 function enterSave(name){
   if(!name) return;
-  switchSave(name);
+  try{
+    switchSave(name);
+  }catch(e){ try{ console.error("enterSave/switchSave", e); }catch(e2){} }
   hideLanding();
+  try{ renderAll(); }catch(e){}
   showToast("Playing: "+name);
+  // If this life still needs starter draft, prompt
+  try{ if(state.starterToken) promptForcedStarter(); }catch(e){}
 }
 let pendingRulesetName=null;
 function landingCreate(){
@@ -2359,6 +2466,7 @@ function landingCreate(){
 }
 function promptForcedStarter(){
   if(!(state.starterToken)) return;
+  hideLanding();
   const o=$("forceStarterOverlay");
   const msg=$("forceStarterMsg");
   if(msg){
@@ -2367,11 +2475,17 @@ function promptForcedStarter(){
     else
       msg.innerHTML=`Roll your <strong>Starter Draft</strong> to begin this life.`;
   }
-  if(o) o.classList.add("open");
+  if(o){ o.classList.add("open"); o.style.display="flex"; }
 }
 function runForcedStarter(){
-  const o=$("forceStarterOverlay"); if(o) o.classList.remove("open");
-  if(state.starterToken && typeof startStarter==="function") startStarter();
+  const o=$("forceStarterOverlay");
+  if(o){ o.classList.remove("open"); o.style.display="none"; }
+  hideLanding();
+  if(state.starterToken && typeof startStarter==="function"){
+    startStarter();
+  } else {
+    showToast("Starter already used — use Death Reset to restore");
+  }
 }
 function clearChallengeFlag(reason){
   if(window._challengeActive || (state && state.challenge)){
@@ -2422,7 +2536,7 @@ function mondainMods(){
   const p=(typeof RULESET_PRESETS!=="undefined"&&RULESET_PRESETS.mondain)||null;
   if(p&&p.mods) return JSON.parse(JSON.stringify(p.mods));
   return {
-    ignorePrereqs: true, customInterval: true, levelsPerCharge: 2, chargesPerAward: 1, maxLevel: 100,
+    requirePrereqs: false, customInterval: true, levelsPerCharge: 2, chargesPerAward: 1, maxLevel: 100,
     starterLimitOn: false, starterMax: null, itemDraft: false, itemMode: "packed", skillItems: false,
     draftReroll: false, questsEnabled: false, questCooldownMinutes: 60, goldItems: false, professions: false,
     gatherSkill: "Mining", craftSkill: "Blacksmith", goldenChance: 0.15, freePickChance: 0.15
@@ -2499,7 +2613,7 @@ function openRulesetModal(){
   const o=$("rulesetOverlay");
   if(!o) return showToast("Ruleset UI missing");
   const sm=$("savesModal"); if(sm) sm.classList.remove("open");
-  if($("rsIgnorePrereq")) $("rsIgnorePrereq").checked=false;
+  if($("rsRequirePrereq")) $("rsRequirePrereq").checked=false;
   if($("rsStarterLimit")) $("rsStarterLimit").checked=false;
   if($("rsStarterMax")) $("rsStarterMax").value=10;
   if($("rsItemDraft")) $("rsItemDraft").checked=false;
@@ -2518,9 +2632,11 @@ function openRulesetModal(){
   window._challengeActive=false; window._challengeCode=""; window._pendingPreset=null;
   showRulesetPicker();
   o.classList.add("open");
+  o.style.display="flex";
 }
 function closeRulesetModal(){
-  const o=$("rulesetOverlay"); if(o) o.classList.remove("open");
+  const o=$("rulesetOverlay");
+  if(o){ o.classList.remove("open"); o.style.display=""; }
 }
 function cancelRuleset(){
   pendingRulesetName=null;
@@ -2541,13 +2657,13 @@ function readRulesetForm(){
   if(customIv!=null){ customInterval=true; levelsPer=customIv; }
   else if(item && !gold){ customInterval=true; levelsPer=2; }
   const out = {
-    ignorePrereqs: !!( $("rsIgnorePrereq")&&$("rsIgnorePrereq").checked ),
+    requirePrereqs: !!( $("rsRequirePrereq")&&$("rsRequirePrereq").checked ),
     customInterval,
     levelsPerCharge: levelsPer,
     chargesPerAward: Math.max(1, parseInt($("rsChargesPer")&&$("rsChargesPer").value,10)||1),
     maxLevel: Math.max(2, parseInt($("rsMaxLevel")&&$("rsMaxLevel").value,10)||100),
     starterLimitOn: !!( $("rsStarterLimit")&&$("rsStarterLimit").checked ),
-    starterMax: parseInt($("rsStarterMax")&&$("rsStarterMax").value,10)||10,
+    starterMax: (()=>{ const v=parseInt($("rsStarterMax")&&$("rsStarterMax").value,10); return (v===0||v)?Math.max(0,v):10; })(),
     itemDraft: item,
     itemMode: ($("rsItemMode")&&$("rsItemMode").value)||"packed",
     skillItems: false,
@@ -2575,7 +2691,7 @@ function readRulesetForm(){
 }
 function buildChallengeTokens(mods, banList, autoList, packBanList, itemBanList, starterAllowList){
   const t=["1"];
-  if(mods.ignorePrereqs) t.push("5");
+  if(mods.requirePrereqs) t.push("5");
   if(mods.starterLimitOn) t.push("B");
   if(mods.itemDraft){
     t.push("ui");
@@ -2692,7 +2808,7 @@ function parseChallengeCode(raw){
     return {ok:false, msg:"Invalid params after -"};
   }
   const mods={
-    ignorePrereqs:false, customInterval:false, levelsPerCharge:4, chargesPerAward:1, maxLevel:100,
+    requirePrereqs:false, customInterval:false, levelsPerCharge:4, chargesPerAward:1, maxLevel:100,
     starterLimitOn:false, starterMax:10, itemDraft:false, itemMode:"packed", skillItems:false,
     draftReroll:false, questsEnabled:false, questCooldownMinutes:60, goldItems:false,
     professions:false, gatherSkill:"Mining", craftSkill:"Blacksmith", goldenChance:0.15, freePickChance:0.15,
@@ -2704,7 +2820,7 @@ function parseChallengeCode(raw){
   let hasUi=false, hasC=false, hasG=false, hasY=false;
   known.forEach(tok=>{
     if(tok==="1") return;
-    if(tok==="5") mods.ignorePrereqs=true;
+    if(tok==="5") mods.requirePrereqs=true;
     else if(tok==="B") mods.starterLimitOn=true;
     else if(tok==="ui"){ mods.itemDraft=true; hasUi=true; }
     else if(tok==="g"){ hasG=true; mods.itemDraft=true; mods.itemMode="packed"; }
@@ -2751,7 +2867,7 @@ function applyChallengeCodeToForm(){
   if(!res.ok){ if(msg){ msg.style.color="#f88"; msg.textContent=res.msg; } return; }
   const m=res.mods;
   window._applyingChallenge=true;
-  if($("rsIgnorePrereq")) $("rsIgnorePrereq").checked=!!m.ignorePrereqs;
+  if($("rsRequirePrereq")) $("rsRequirePrereq").checked=!!m.requirePrereqs;
   if($("rsStarterLimit")) $("rsStarterLimit").checked=!!m.starterLimitOn;
   if($("rsItemDraft")) $("rsItemDraft").checked=!!m.itemDraft;
   if($("rsItemMode")) $("rsItemMode").value=m.itemMode||"packed";
@@ -2793,7 +2909,7 @@ function updateRulesetDesc(){
   const interval=mods.customInterval?mods.levelsPerCharge:((mods.itemDraft&&!mods.goldItems)?2:4);
   const lines=[];
   lines.push(`<li><strong>Skill draft</strong> (always on) — every <strong>${interval}</strong> levels you gain a generate charge.</li>`);
-  if(mods.ignorePrereqs) lines.push(`<li><strong>Ignore prerequisites</strong> on.</li>`);
+  if(mods.requirePrereqs) lines.push(`<li><strong>Require prerequisites</strong> on.</li>`);
   else lines.push(`<li><strong>Prerequisites</strong> enforced.</li>`);
   if(mods.starterLimitOn) lines.push(`<li><strong>Starter rerolls</strong> limited to ${mods.starterMax}.</li>`);
   else lines.push(`<li><strong>Starter rerolls</strong> unlimited.</li>`);
@@ -2863,14 +2979,14 @@ function createSaveWithMods(name, mods, opts){
   const fresh=normalizeState({
     remaining:[...MASTER_LIST], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
-    unlockedSlots:0, level:1, xp:0, totalXp:0, prestige:0, rerolls:0,
+    unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, itemCharges:0, chargesSpent:0, itemChargesSpent:0,
     levelsSinceReward:0, starterUses:0, starterItemUses:0,
     mods: mods,
     itemRemaining:defaultItemPool(mods.itemMode||"packed"),
     itemPicked:[],
     quest:null, questStreak:0, questCooldownUntil:0, questChoices:null,
-    totalCoins:0, spendableCoins:0, coinsSpent:0,
+    totalCoins:0, coinsIngame:0, coinsQuests:0, spendableCoins:0, coinsSpent:0, lastLifetimeReport:0, lifetimeHistory:[],
     starterToken:true, starterItemToken:true,
     itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
     skillValues:{}, extraProfessions:[], professionCoinsSpent:0, history:[],
@@ -2879,7 +2995,6 @@ function createSaveWithMods(name, mods, opts){
     bans: (opts.bans && typeof opts.bans==="object") ? opts.bans : {},
     autoSkills: Array.isArray(opts.autoSkills) ? opts.autoSkills : [],
     starterItemAllow: Array.isArray(opts.starterItemAllow) ? opts.starterItemAllow : [],
-    hideXpTrackerPrompt: false,
     rulesetName: opts.rulesetName || ""
   });
   store.slots[name]=fresh;
@@ -2929,7 +3044,7 @@ function renderSavesList(){
 function syncMilestoneSlots(){state.unlockedSlots=Math.min(state.prestige,MAX_MILESTONE_SLOTS);}
 function renderMilestones(){
   syncMilestoneSlots();
-  const el=$("milestoneSlots"); el.innerHTML="";
+  const el=$("milestoneSlots"); if(!el) return; el.innerHTML="";
   for(let i=0;i<MAX_MILESTONE_SLOTS;i++){
     const slot=document.createElement("div"); slot.className="slot";
     if(i>=state.unlockedSlots){slot.innerHTML=`<span class="empty-label">Locked</span>`;slot.style.opacity=".4";slot.style.cursor="default";}
@@ -2973,36 +3088,94 @@ function claimMilestone(i){
   showToast("Claimed skill: "+n);
 }
 
-function addXP(){
-  const amount=Math.max(0,parseInt($("xpInput").value,10)||0);
-  if(amount<=0) return showToast("Enter XP");
-  $("xpInput").value="";
-  state.xp+=amount; state.totalXp+=amount;
-  if(typeof coinsEnabled==="function" ? coinsEnabled() : (state.mods&&state.mods.goldItems)){
-    state.totalCoins=(state.totalCoins||0)+amount;
-    state.spendableCoins=(state.spendableCoins||0)+amount;
-  }
-  pushHistory("XP added: +"+amount+((typeof coinsEnabled==="function"?coinsEnabled():state.mods.goldItems)?" (coins +"+amount+")":""));
+function applyXpTowardLevels(amount){
   let leveled=0;
   const interval=levelsPerCharge();
   const per=chargesPerAward();
   const maxL=maxLevel();
+  state.xp=(state.xp||0)+amount;
   while(state.level<maxL&&state.xp>=xpRequired()){
     state.xp-=xpRequired(); state.level+=1; leveled+=1;
-    state.levelsSinceReward+=1;
+    state.levelsSinceReward=(state.levelsSinceReward||0)+1;
     if(state.levelsSinceReward>=interval){
       state.levelsSinceReward=0;
-      state.generateCharges+=per;
+      state.generateCharges=(state.generateCharges||0)+per;
       showToast(`Level ${state.level}! +${per} Generate charge(s)`);
     }
     if(state.mods&&state.mods.rerollEveryLevel){
       state.rerolls=(state.rerolls||0)+1;
     }
   }
-  if(state.level>=maxL){state.xp=0;$("prestigeBtn").classList.add("show");}
+  if(state.level>=maxL){ state.xp=0; const pb=$("prestigeBtn"); if(pb) pb.classList.add("show"); }
+  return leveled;
+}
+function renderLifetimeHistory(){
+  const box=$("lifetimeHistoryList");
+  if(!box) return;
+  const h=state.lifetimeHistory||[];
+  if(!h.length){
+    box.innerHTML=`<span style="color:#555;font-style:italic">No reports yet. First report sets your baseline (or awards from 0).</span>`;
+    return;
+  }
+  box.innerHTML=h.slice().reverse().map(e=>{
+    return `<div><span style="color:#666">${e.t||""}</span> — reported <strong>${(e.reported||0).toLocaleString()}</strong> · prior ${(e.prior||0).toLocaleString()} · gain <strong style="color:#74b9ff">+${(e.delta||0).toLocaleString()}</strong></div>`;
+  }).join("");
+}
+/** Report avatar lifetime coin total. Only the increase since last report is applied as in-game XP. */
+function addXP(){
+  const reported=Math.max(0,parseInt($("xpInput")&&$("xpInput").value,10)||0);
+  if(!$("xpInput")||$("xpInput").value==="") return showToast("Enter your avatar lifetime coin total");
+  const prior=Math.max(0, state.lastLifetimeReport||0);
+  if(reported < prior){
+    if(!confirm("Reported total ("+reported.toLocaleString()+") is lower than last report ("+prior.toLocaleString()+").\n\nUse this as a new baseline without awarding XP? (e.g. after a wipe)")) return;
+    state.lastLifetimeReport=reported;
+    if(!state.lifetimeHistory) state.lifetimeHistory=[];
+    state.lifetimeHistory.push({t:new Date().toLocaleString(), reported, prior, delta:0, note:"baseline reset"});
+    if(state.lifetimeHistory.length>30) state.lifetimeHistory=state.lifetimeHistory.slice(-30);
+    if($("xpInput")) $("xpInput").value="";
+    save(); updateStatus();
+    pushHistory("Lifetime baseline set to "+reported);
+    showToast("Baseline set to "+reported.toLocaleString()+" (no XP awarded)");
+    return;
+  }
+  const delta=reported - prior;
+  if(delta<=0){
+    showToast("No change since last report ("+prior.toLocaleString()+")");
+    return;
+  }
+  if($("xpInput")) $("xpInput").value="";
+  state.lastLifetimeReport=reported;
+  state.xpIngame=(state.xpIngame||0)+delta;
+  state.totalXp=(state.xpIngame||0)+(state.xpQuests||0);
+  const coinsOn=typeof coinsEnabled==="function"?coinsEnabled():!!(state.mods&&state.mods.goldItems);
+  if(coinsOn){
+    state.coinsIngame=(state.coinsIngame||0)+delta;
+    state.totalCoins=(state.coinsIngame||0)+(state.coinsQuests||0);
+    state.spendableCoins=(state.spendableCoins||0)+delta;
+  }
+  if(!state.lifetimeHistory) state.lifetimeHistory=[];
+  state.lifetimeHistory.push({t:new Date().toLocaleString(), reported, prior, delta});
+  if(state.lifetimeHistory.length>30) state.lifetimeHistory=state.lifetimeHistory.slice(-30);
+  pushHistory("Lifetime report "+reported.toLocaleString()+" (prior "+prior.toLocaleString()+") → +"+delta.toLocaleString()+" in-game XP");
+  const leveled=applyXpTowardLevels(delta);
   save(); updateStatus(); renderMilestones();
-  if(leveled&&state.levelsSinceReward!==0) showToast(`+${amount} XP · +${leveled} level(s)`);
-  else if(!leveled) showToast(`+${amount} XP`);
+  showToast("+"+delta.toLocaleString()+" in-game XP"+(leveled?" · +"+leveled+" level(s)":"")+" (lifetime "+reported.toLocaleString()+")");
+}
+function grantQuestXp(amount, coinAmount){
+  amount=Math.max(0, Math.ceil(amount||0));
+  if(amount<=0) return 0;
+  state.xpQuests=(state.xpQuests||0)+amount;
+  state.totalXp=(state.xpIngame||0)+(state.xpQuests||0);
+  const coinsOn=typeof coinsEnabled==="function"?coinsEnabled():!!(state.mods&&state.mods.goldItems);
+  if(coinsOn){
+    const c=coinAmount!=null?Math.max(0,Math.ceil(coinAmount)) : amount;
+    if(c>0){
+      state.coinsQuests=(state.coinsQuests||0)+c;
+      state.totalCoins=(state.coinsIngame||0)+(state.coinsQuests||0);
+      state.spendableCoins=(state.spendableCoins||0)+c;
+    }
+  }
+  return applyXpTowardLevels(amount);
 }
 
 function applyModifiersRefresh(){
@@ -3014,14 +3187,14 @@ function applyModifiersRefresh(){
   }
 
   const prevMode=state.mods.itemMode||"packed";
-  state.mods.ignorePrereqs=$("modIgnorePrereq").checked;
+  state.mods.requirePrereqs=$("modRequirePrereq")?$("modRequirePrereq").checked:false;
   state.mods.customInterval=$("modCustomInterval").checked;
   state.mods.levelsPerCharge=Math.max(1,parseInt($("modInterval").value,10)||4);
   state.mods.chargesPerAward=Math.max(1,parseInt($("modChargesPer").value,10)||1);
   state.mods.maxLevel=Math.max(2,parseInt($("modMaxLevel").value,10)||100);
   state.mods.starterLimitOn=$("modStarterLimit").checked;
   const sm=$("modStarterMax").value;
-  state.mods.starterMax=sm===""||sm===null?null:Math.max(1,parseInt(sm,10)||1);
+  state.mods.starterMax=sm===""||sm===null?null:Math.max(0,parseInt(sm,10)||0);
   state.mods.itemDraft=$("modItemDraft").checked;
   state.mods.skillItems=$("modSkillItems")?$("modSkillItems").checked:false;
   state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
@@ -3194,7 +3367,7 @@ function openPickModal(mode){
     return;
   }
   // free / manual skill
-  const ignorePrereq=mode==="free" || !!(state.mods&&state.mods.ignorePrereqs);
+  const ignorePrereq=mode==="free" || !(state.mods&&state.mods.requirePrereqs);
   const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&(ignorePrereq||prereqsMet(x))&&!isBlockedByProfession(x));
   if(!choices.length) return showToast("None available");
   $("modalTitle").textContent=mode==="free"?(gold?"Golden Free Pick (Skill)":"Free Pick"):"Manual Pick";
@@ -3296,7 +3469,7 @@ function finalizePick(item){
   }
 
   // Skills
-  if(currentMode==="free" && gold && !(state.mods&&state.mods.ignorePrereqs)){
+  if(currentMode==="free" && gold && !!(state.mods&&state.mods.requirePrereqs)){
     const tied=skillsTiedByPrereq(item);
     tied.forEach(grantSkill);
     if(freePickCardEl){
@@ -3658,22 +3831,6 @@ function applyBansToPools(){
     state.itemRemaining = state.itemRemaining.filter(x=>!kill.has(x));
   }
 }
-function shouldShowXpTrackerPrompt(){
-  return !state.hideXpTrackerPrompt;
-}
-function showXpTrackerRemind(){
-  if(!shouldShowXpTrackerPrompt()) return;
-  const m=$("xpTrackerRemindModal");
-  if($("xpRemindDisable")) $("xpRemindDisable").checked=false;
-  if(m) m.classList.add("open");
-}
-function closeXpTrackerRemind(){
-  if($("xpRemindDisable")&&$("xpRemindDisable").checked){
-    state.hideXpTrackerPrompt=true;
-    save();
-  }
-  const m=$("xpTrackerRemindModal"); if(m) m.classList.remove("open");
-}
 function finalizeStarter(){
   if(!starterMode||!starterCards.length) return;
   const names=starterCards.map(c=>c.name);
@@ -3691,7 +3848,7 @@ function finalizeStarter(){
     cardsEl.innerHTML=`<p class="empty">Starter Items locked: ${names.join(", ")}</p>`;
     save(); updateStatus(); renderPicked();
     showToast("Starter Items: "+names.join(", "));
-    setTimeout(showXpTrackerRemind, 400);
+    
     return;
   }
   names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
@@ -3704,10 +3861,10 @@ function finalizeStarter(){
     showToast("Starter Items available");
     setTimeout(()=>{
       if(state.starterItemToken && confirm("Continue to Starter Items?")) startCombatItems();
-      else setTimeout(showXpTrackerRemind, 300);
+      
     }, 350);
   } else {
-    setTimeout(showXpTrackerRemind, 400);
+    
   }
 }
 function buyItemCharge(){
@@ -3801,7 +3958,7 @@ function renderBans(){
   });
 }
 function syncModUI(){
-  $("modIgnorePrereq").checked=!!state.mods.ignorePrereqs;
+  if($("modRequirePrereq")) $("modRequirePrereq").checked=!!state.mods.requirePrereqs;
   $("modCustomInterval").checked=!!state.mods.customInterval;
   $("modInterval").value=state.mods.levelsPerCharge||4;
   if($("modChargesPer")) $("modChargesPer").value=state.mods.chargesPerAward||1;
@@ -3826,7 +3983,9 @@ function syncEditUI(){
   $("editChargesSpent").value=state.chargesSpent;
   $("editLevel").value=state.level;
   $("editXp").value=state.xp;
-  $("editTotalXp").value=state.totalXp;
+  if($("editXpIngame")) $("editXpIngame").value=state.xpIngame||0;
+  if($("editXpQuests")) $("editXpQuests").value=state.xpQuests||0;
+  if($("editLastLifetime")) $("editLastLifetime").value=state.lastLifetimeReport||0;
   $("editRerolls").value=state.rerolls;
   $("editPrestige").value=state.prestige;
   $("editStarterUses").value=state.starterUses;
@@ -3841,7 +4000,10 @@ function applyEditValues(){
   state.chargesSpent=Math.max(0,parseInt($("editChargesSpent").value,10)||0);
   state.level=Math.max(1,Math.min(maxLevel(), parseInt($("editLevel").value,10)||1));
   state.xp=Math.max(0,parseInt($("editXp").value,10)||0);
-  state.totalXp=Math.max(0,parseInt($("editTotalXp").value,10)||0);
+  state.xpIngame=Math.max(0,parseInt($("editXpIngame")&&$("editXpIngame").value,10)||0);
+  state.xpQuests=Math.max(0,parseInt($("editXpQuests")&&$("editXpQuests").value,10)||0);
+  state.lastLifetimeReport=Math.max(0,parseInt($("editLastLifetime")&&$("editLastLifetime").value,10)||0);
+  state.totalXp=(state.xpIngame||0)+(state.xpQuests||0);
   state.rerolls=Math.max(0,parseInt($("editRerolls").value,10)||0);
   state.prestige=Math.max(0,parseInt($("editPrestige").value,10)||0);
   state.starterUses=Math.max(0,parseInt($("editStarterUses").value,10)||0);
@@ -4007,6 +4169,12 @@ function saveAllSkillValues(){
 }
 function listAccessibleQuests(){
   const out=[];
+  if(typeof isPityEligible==="function" && isPityEligible()){
+    (typeof PITY_QUESTS!=="undefined"?PITY_QUESTS:[]).forEach(p=>{
+      out.push({...p, type:"pity", _src:"pity", rewardXp:p.rewardXp||500});
+    });
+    return out;
+  }
   if(typeof MONSTER_POOL!=="undefined"){
     MONSTER_POOL.forEach(m=>{
       const def={...m, type:"kill", _src:"monster", title:"Kill "+(m.name||"creatures"), description:m.description||""};
@@ -4085,15 +4253,25 @@ function craftQuestEligible(def){
   if(!def) return false;
   const skills=playerSkills();
   if(def.requires&&def.requires.length && !def.requires.some(r=>skills.has(r))) return false;
-  // skill value gates (use highest matching required skill)
+  // Skill value gates: unrecorded value counts as 0.0 (not "allow all")
   const reqs=def.requires||[];
+  const minS=def.minSkill!=null?Number(def.minSkill):0;
+  const maxS=def.maxSkill!=null?Number(def.maxSkill):125;
+  let checked=false;
   for(const r of reqs){
     if(!skills.has(r)) continue;
-    const v=skillVal(r);
-    if(v==null) continue; // no recorded value = allow
-    const minS=def.minSkill!=null?Number(def.minSkill):0;
-    const maxS=def.maxSkill!=null?Number(def.maxSkill):125;
+    const raw=skillVal(r);
+    const v = (raw==null || isNaN(raw)) ? 0 : Number(raw);
+    checked=true;
     if(v < minS || v > maxS) return false;
+  }
+  // Has the skill card but somehow no req loop ran — still enforce min/max vs 0
+  if(reqs.length && !checked){
+    if(0 < minS || 0 > maxS) return false;
+  }
+  if(reqs.length===0){
+    // no skill requirement listed — still respect minSkill against 0 if set
+    if(minS>0) return false;
   }
   const minLv=Math.max(1, parseInt(def.minLevel,10)||1);
   if((state.level||1) < minLv) return false;
@@ -4110,6 +4288,7 @@ function npcQuestEligible(def){
 }
 function questEligible(def){
   if(!def) return false;
+  if(def._src==="pity") return typeof isPityEligible==="function" && isPityEligible();
   if(def._src==="monster") return monsterEligible(def);
   if(def._src==="craft") return craftQuestEligible(def);
   if(def._src==="npc") return npcQuestEligible(def);
@@ -4181,20 +4360,23 @@ function rollQuestCount(def){
 }
 function buildQuestPool(){
   const pool=[];
+  // Pity mode: no combat & no crafting skills → only pity tasks
+  if(typeof isPityEligible==="function" && isPityEligible()){
+    (typeof PITY_QUESTS!=="undefined"?PITY_QUESTS:[]).forEach(p=>{
+      pool.push({
+        _src:"pity", id:p.id, type:"pity",
+        title:p.title, description:p.description||"",
+        reward:{ kind:"xp", value:p.rewardXp||500 },
+        requires:[]
+      });
+    });
+    return pool;
+  }
   (typeof MONSTER_POOL!=="undefined"?MONSTER_POOL:[]).forEach(m=>{
-    // rewardPct (session XP %), rewardXp (static XP) — either or both
-    const hasPct = m.rewardPct!=null && Number(m.rewardPct)>0;
-    const hasStatic = m.rewardXp!=null && Number(m.rewardXp)>0;
-    let reward;
-    if(hasPct && hasStatic){
-      reward={ kind:"xp_pct", value:Number(m.rewardPct), staticXp:Number(m.rewardXp) };
-    } else if(hasPct){
-      reward={ kind:"xp_pct", value:Number(m.rewardPct) };
-    } else if(hasStatic){
-      reward={ kind:"xp", value:Number(m.rewardXp) };
-    } else {
-      reward={ kind:"xp_pct", value:0.15 }; // default if neither set
-    }
+    // Kill quests: base rewardXp × (killCount/100). No session XP logging.
+    let base=Number(m.rewardXp);
+    if(!(base>0) && m.rewardPct!=null) base=Math.round(Number(m.rewardPct)*10000); // 0.30 → 3000
+    if(!(base>0)) base=1000;
     const def={
       _src:"monster", id:"kill_"+m.id, type:"kill",
       title:"Kill {x} "+m.name+" creatures",
@@ -4202,7 +4384,7 @@ function buildQuestPool(){
       countMin:m.countMin, countMax:m.countMax,
       minLevel:m.minLevel, maxLevel:m.maxLevel,
       requiresPrestige: !!m.requiresPrestige,
-      reward,
+      reward:{ kind:"kill_count", baseXp: base },
       requires: (typeof COMBAT_SKILLS!=="undefined"?COMBAT_SKILLS:[])
     };
     if(questEligible(def)) pool.push(def);
@@ -4240,9 +4422,16 @@ function buildQuestPool(){
   return pool;
 }
 function makeQuestInstance(def){
-  const count=def.type==="npc" ? 1 : rollQuestCount(def);
+  const count=(def.type==="npc"||def.type==="pity") ? 1 : rollQuestCount(def);
   let reward=def.reward?{...def.reward}: {kind:"xp", value:0};
   let resourceName="", resourceBonusPct=0;
+  // Kill quests: base * (1 + count/100) — e.g. 3000 * 1.28 = 3840 for 28 kills
+  if(def.type==="kill" && (reward.kind==="kill_count" || reward.kind==="xp")){
+    const base=Number(reward.baseXp!=null?reward.baseXp:reward.value)||0;
+    const countBonus=Math.ceil(base * (count/100));
+    const value=base + countBonus;
+    reward={ kind:"kill_count", baseXp: base, count, countBonus, value };
+  }
   // Crafting only: total = base + ceil(base * (count% + resourceBonus%) / 100)
   if(def.type==="craft" && reward.kind==="xp"){
     const base=Number(reward.value)||0;
@@ -4313,10 +4502,24 @@ function acceptQuestChoice(idx){
   save(); renderQuestLog();
   showToast("Quest accepted: "+state.quest.title);
 }
+function chainBonusFraction(streak){
+  // Highest matching milestone; streak does not reset on success
+  const n=Math.max(0, streak|0);
+  if(n<=0) return 0;
+  const ms=typeof QUEST_CHAIN_MILESTONES!=="undefined"?QUEST_CHAIN_MILESTONES:[];
+  for(const m of ms){
+    if(m.every>0 && n % m.every===0) return Number(m.bonus)||0;
+  }
+  return 0;
+}
 function chainMultiplier(){
-  // Bonus applies on the Nth completion in a row (e.g. 10th), then streak resets
-  const next = (state.questStreak||0) + 1;
-  return next >= QUEST_CHAIN_BONUS_AT ? QUEST_CHAIN_BONUS_MULT : 1;
+  const next=(state.questStreak||0)+1;
+  return 1 + chainBonusFraction(next);
+}
+function chainMilestoneLabel(streak){
+  const b=chainBonusFraction(streak);
+  if(b<=0) return "";
+  return " · milestone +"+Math.round(b*100)+"%";
 }
 
 function addQuestSessionXp(){
@@ -4340,82 +4543,51 @@ function setQuestKills(){
 function completeQuest(){
   if(!state.quest) return;
   const q=state.quest;
-  const mult=chainMultiplier();
+  const nextStreak=(state.questStreak||0)+1;
+  const mult=1+chainBonusFraction(nextStreak);
   let msg="";
-  if(q.reward.kind==="xp"){
+  if(q.reward.kind==="kill_count"){
+    const base=Number(q.reward.baseXp)||0;
+    const kills=Number(q.count)||Number(q.reward.count)||0;
+    const countPct = kills/100;
+    const chainB = chainBonusFraction(nextStreak);
+    // base * (1 + count/100 + chainBonus)  e.g. 3000*(1+0.28+0.65)=5790
+    const xp=Math.ceil(base * (1 + countPct + chainB));
+    const coinPct=(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25);
+    const coinsOn=typeof coinsEnabled==="function"?coinsEnabled():!!(state.mods&&state.mods.goldItems);
+    const c=coinsOn?Math.ceil(xp*coinPct):0;
+    grantQuestXp(xp, c);
+    const ms=chainMilestoneLabel(nextStreak);
+    if(c>0) msg=`+${xp} quest XP (${base} base, +${Math.round(countPct*100)}% kills`+(chainB?`, +${Math.round(chainB*100)}% chain`:``)+`) · +${c} coins`;
+    else msg=`+${xp} quest XP (${base} base, +${Math.round(countPct*100)}% kills`+(chainB?`, +${Math.round(chainB*100)}% chain`:``)+`)`;
+  } else if(q.reward.kind==="xp"){
     const xp=Math.ceil((q.reward.value||0)*mult);
-    // feed into XP system
-    state.xp+=xp; state.totalXp+=xp;
-    let leveled=0;
-    const interval=levelsPerCharge();
-    const per=chargesPerAward();
-    const maxL=maxLevel();
-    while(state.level<maxL&&state.xp>=xpRequired()){
-      state.xp-=xpRequired(); state.level+=1; leveled+=1;
-      state.levelsSinceReward+=1;
-      if(state.levelsSinceReward>=interval){
-        state.levelsSinceReward=0;
-        state.generateCharges+=per;
-      }
-      if(state.mods&&state.mods.rerollEveryLevel){
-        state.rerolls=(state.rerolls||0)+1;
-      }
-    }
-    if(state.level>=maxL) state.xp=0;
-    if(state.mods&&state.mods.goldItems){
-      const c=Math.ceil(xp*(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25));
-      state.totalCoins=(state.totalCoins||0)+c;
-      state.spendableCoins=(state.spendableCoins||0)+c;
-      msg=`+${xp} XP · +${c} coins`+(mult>1?` (${mult}× chain)`:"");
-    } else {
-      msg=`+${xp} XP`+(mult>1?` (${mult}× chain)`:"");
-    }
+    const coinPct=(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25);
+    const c=(typeof coinsEnabled==="function"?coinsEnabled():state.mods&&state.mods.goldItems)?Math.ceil(xp*coinPct):0;
+    grantQuestXp(xp, c);
+    const ms=chainMilestoneLabel(nextStreak);
+    if(c>0) msg=`+${xp} quest XP · +${c} coins`+(mult>1?` (×${mult.toFixed(2)})`:``)+ms;
+    else msg=`+${xp} quest XP`+(mult>1?` (×${mult.toFixed(2)})`:``)+ms;
   } else if(q.reward.kind==="xp_pct"){
-    // Session XP + % bonus, optional staticXp on top
+    // Legacy path (should be rare) — treat as quest-only bonus
     const baseXp=Math.max(0, Number(q.totalQuestXp)||0);
     const staticXp=Math.max(0, Number(q.reward.staticXp)||0);
     if(baseXp<=0 && staticXp<=0) return showToast("Log session XP gains on this quest first");
     if((q.reward.value||0)>0 && baseXp<=0) return showToast("Log session XP gains on this quest first");
     const bonus=Math.ceil(baseXp*(q.reward.value||0)*mult);
     const staticPart=Math.ceil(staticXp*mult);
-    const xp=baseXp+bonus+staticPart;
-    state.xp+=xp; state.totalXp+=xp;
-    let leveled=0;
-    const interval=levelsPerCharge();
-    const per=chargesPerAward();
-    const maxL=maxLevel();
-    while(state.level<maxL&&state.xp>=xpRequired()){
-      state.xp-=xpRequired(); state.level+=1; leveled+=1;
-      state.levelsSinceReward+=1;
-      if(state.levelsSinceReward>=interval){
-        state.levelsSinceReward=0;
-        state.generateCharges+=per;
-      }
-      if(state.mods&&state.mods.rerollEveryLevel){
-        state.rerolls=(state.rerolls||0)+1;
-      }
-    }
-    if(state.level>=maxL) state.xp=0;
-    // quests deposit 25% of entered kill XP as spendable coins (when gold items on)
-    if(state.mods&&state.mods.goldItems && baseXp>0){
-      const c=Math.ceil(baseXp*(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25));
-      state.totalCoins=(state.totalCoins||0)+c;
-      state.spendableCoins=(state.spendableCoins||0)+c;
-      const staticNote=staticPart?` + ${staticPart} static`:"";
-      msg=`+${xp} XP (${baseXp} + ${bonus} bonus${staticNote}) · +${c} coins`+(mult>1?` (bonus ${mult}× chain)`:"");
-    } else {
-      const staticNote=staticPart?` + ${staticPart} static`:"";
-      msg=`+${xp} XP (${baseXp} + ${bonus} bonus${staticNote})`+(mult>1?` (bonus ${mult}× chain)`:"");
-    }
+    const questXp=bonus+staticPart;
+    if(questXp<=0) return showToast("No quest bonus to award");
+    const coinPct=(typeof QUEST_COIN_PCT!=="undefined"?QUEST_COIN_PCT:0.25);
+    const coinsOn=typeof coinsEnabled==="function"?coinsEnabled():!!(state.mods&&state.mods.goldItems);
+    const c=coinsOn?Math.ceil(questXp*coinPct):0;
+    grantQuestXp(questXp, c);
+    msg=`+${questXp} quest XP`+chainMilestoneLabel(nextStreak);
   } else {
     msg="Quest complete";
   }
-  state.questStreak=(state.questStreak||0)+1;
-  let streakMsg=state.questStreak;
-  if(state.questStreak >= QUEST_CHAIN_BONUS_AT){
-    streakMsg = state.questStreak + " (bonus!) → reset";
-    state.questStreak = 0;
-  }
+  state.questStreak=nextStreak; // never resets on success
+  const streakMsg=state.questStreak+chainMilestoneLabel(state.questStreak);
   state.quest=null;
   state.questCooldownUntil=Date.now()+questCooldownMs();
   save(); renderQuestLog(); updateStatus(); renderMilestones();
@@ -4458,22 +4630,25 @@ function renderQuestLog(){
     return;
   }
   const streak=state.questStreak||0;
-  const nextBonus = QUEST_CHAIN_BONUS_AT - streak;
-  const chainNote = nextBonus <= 0
-    ? `Chain ready — next quest gets ×${QUEST_CHAIN_BONUS_MULT}, then resets`
-    : `Chain <strong>${streak}</strong> / ${QUEST_CHAIN_BONUS_AT} — bonus on the ${QUEST_CHAIN_BONUS_AT}th, then resets`;
+  const next=streak+1;
+  const nextB=chainBonusFraction(next);
+  const chainNote = nextB>0
+    ? `Chain <strong>${streak}</strong> — next (#${next}) is a milestone: <strong>+${Math.round(nextB*100)}%</strong>`
+    : `Chain <strong>${streak}</strong> — milestones at 10 / 50 / 100 / 250 / 1000 (streak never resets on success)`;
   if(state.questChoices&&state.questChoices.length){
     body.innerHTML=`<p class="ql-empty" style="font-style:normal;color:#c9a227">Choose your burden:</p>`+
       state.questChoices.map((q,i)=>{
         let extra="";
-        if(q.type==="craft"&&q.reward&&q.reward.baseXp!=null){
+        if(q.type==="kill"&&q.reward&&q.reward.kind==="kill_count"){
+          extra=` · ~${q.reward.value} XP (${q.reward.baseXp}×${q.count}/100)`;
+        } else if(q.type==="craft"&&q.reward&&q.reward.baseXp!=null){
           const rn=q.resourceName?` · ${q.resourceName}`:"";
           extra=` · ~${q.reward.value} XP (${q.reward.baseXp}+${q.reward.countBonus} count`+(q.reward.resourceBonus?`+${q.reward.resourceBonus} mat`:``)+`)`+rn;
         } else if(q.reward&&q.reward.kind==="xp"){
           extra=` · ${q.reward.value} XP`;
         }
         return `<button type="button" data-qpick="${i}" style="display:block;width:100%;text-align:left;margin:.35rem 0;padding:.55rem .65rem;background:#252530;border:1px solid #3d3420;border-radius:8px;color:#f5e6c8;cursor:pointer;font-family:system-ui,sans-serif;font-size:.82rem">
-        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":"Slaying")}${extra}</span>
+        <strong>${q.title}</strong><br><span style="color:#8a7f6a">${q.type==="craft"?"Crafting":(q.type==="npc"?"NPC":(q.type==="pity"?"Pity":"Slaying"))}${extra}</span>
       </button>`;
       }).join("")+
       `<div class="ql-actions" style="margin-top:.5rem"><button class="ql-skip" id="questSkipBtn">Skip Offers</button></div>
@@ -4488,9 +4663,15 @@ function renderQuestLog(){
     return;
   }
   const q=state.quest;
-  const type=q.type==="craft"?"craft":(q.type==="npc"?"npc":"kill");
+  const type=q.type==="craft"?"craft":(q.type==="npc"?"npc":(q.type==="pity"?"pity":"kill"));
   let rewardLine="";
-  if(q.reward.kind==="xp"){
+  if(q.reward.kind==="kill_count"){
+    const base=q.reward.baseXp||0;
+    const kills=q.count||q.reward.count||0;
+    const raw=Math.ceil(base*(kills/100));
+    const mult=chainMultiplier();
+    rewardLine=`Reward: <strong>${Math.ceil(raw*mult)} XP</strong> <span style="color:#8a7f6a">(${base} × ${kills}/100`+(mult>1?` × ${mult.toFixed(2)} chain`:``)+`)</span>`;
+  } else if(q.reward.kind==="xp"){
     const total=q.reward.value||0;
     const mult=chainMultiplier();
     if(q.type==="craft" && q.reward.baseXp!=null){
@@ -4501,21 +4682,17 @@ function renderQuestLog(){
       rewardLine=`Reward: <strong>${Math.ceil(total*mult)} XP</strong>`+(mult>1?` (base ${total} × chain)`:"");
     }
   } else if(q.reward.kind==="xp_pct"){
-    const pct=Math.round((q.reward.value||0)*100);
-    const st=q.reward.staticXp?` + <strong>${q.reward.staticXp} static XP</strong>`:"";
-    rewardLine=`Reward: <strong>XP you enter</strong>`+(pct?` + <strong>${pct}%</strong> bonus`:``)+st+(chainMultiplier()>1?` (bonus ×${QUEST_CHAIN_BONUS_MULT} this quest)`:"");
+    rewardLine=`Reward: legacy % of session XP`;
   }
-  let typeLabel=type==="craft"?"Crafting":(type==="npc"?"NPC Tribute":"Monster Slaying");
+  let typeLabel=type==="craft"?"Crafting":(type==="npc"?"NPC Tribute":(type==="pity"?"Pity Task":"Monster Slaying"));
   let progress="";
-  if(q.type==="kill" || q.reward.kind==="xp_pct"){
+  if(q.type==="kill"){
     progress=`
       <div class="ql-meta" style="margin-top:.35rem">
-        Kills logged: <strong>${q.killsLogged||0}</strong> / target ${q.count||"?"}
-        · Quest XP total: <strong>${q.totalQuestXp||0}</strong>
+        Target kills: <strong>${q.count||"?"}</strong>
+        · Base ${q.reward&&q.reward.baseXp!=null?q.reward.baseXp:"?"} × ${(q.count||0)}/100
       </div>
-      <input class="ql-xp" id="questKillsLogged" type="number" min="0" value="${q.killsLogged||0}" placeholder="Kills this quest">
-      <input class="ql-xp" id="questSessionXp" type="number" min="0" placeholder="Session XP gain to add">
-      <button type="button" class="ql-complete" id="questAddXpBtn" style="width:100%;margin-bottom:.45rem;background:#6c5ce7">Add Session XP to Quest Total</button>
+      <p style="font-size:.78rem;color:#8a7f6a;margin:.35rem 0 .5rem;line-height:1.4">Kill reward is fixed from the roll — no session XP entry. In-game kill XP still comes from <strong>Report Lifetime</strong>.</p>
     `;
   }
   body.innerHTML=`
@@ -4650,14 +4827,6 @@ const _qbm=$("questBoardModal"); if(_qbm) _qbm.onclick=e=>{ if(e.target===_qbm) 
 
 bind("rsChallengeApply", applyChallengeCodeToForm);
 bind("forceStarterGo", runForcedStarter);
-bind("xpRemindClose", closeXpTrackerRemind);
-bind("xpRemindCopy", async ()=>{
-  const url="https://github.com/Asgria/memento---avatar-coin-tracker---python";
-  try{ await navigator.clipboard.writeText(url); showToast("Link copied"); }
-  catch{ showToast("Copy failed — select the URL manually"); }
-});
-const xprm=$("xpTrackerRemindModal");
-if(xprm) xprm.onclick=e=>{ if(e.target===xprm) closeXpTrackerRemind(); };
 
 bind("genChallengeBtn", openGenChallengeModal);
 bind("gcBuildBtn", buildGenChallengeCode);
@@ -4670,7 +4839,7 @@ bind("gcCopyBtn", async ()=>{
 });
 const gcm=$("genChallengeModal"); if(gcm) gcm.onclick=e=>{ if(e.target===gcm) gcm.classList.remove("open"); };
 
-["rsIgnorePrereq","rsStarterLimit","rsStarterMax","rsItemDraft","rsItemMode","rsGoldItems","rsQuests","rsProfessions","rsGather","rsCraft","rsDraftReroll","rsInterval","rsChargesPer","rsMaxLevel"].forEach(id=>{
+["rsRequirePrereq","rsStarterLimit","rsStarterMax","rsItemDraft","rsItemMode","rsGoldItems","rsQuests","rsProfessions","rsGather","rsCraft","rsDraftReroll","rsInterval","rsChargesPer","rsMaxLevel"].forEach(id=>{
   const el=$(id); if(!el) return;
   el.addEventListener("change", onRulesetFormChange);
   el.addEventListener("input", onRulesetFormChange);
@@ -4678,19 +4847,6 @@ const gcm=$("genChallengeModal"); if(gcm) gcm.onclick=e=>{ if(e.target===gcm) gc
 
 const landingName=$("landingNewName");
 if(landingName) landingName.addEventListener("keydown", e=>{ if(e.key==="Enter") landingCreate(); });
-bind("githubBtn", ()=>{ const m=$("githubModal"); if(m) m.classList.add("open"); });
-bind("githubClose", ()=>{ const m=$("githubModal"); if(m) m.classList.remove("open"); });
-const githubModal=$("githubModal");
-if(githubModal) githubModal.onclick=e=>{ if(e.target===githubModal) githubModal.classList.remove("open"); };
-bind("githubCopyBtn", async ()=>{
-  const url="https://github.com/Asgria/memento---avatar-coin-tracker---python";
-  try{
-    await navigator.clipboard.writeText(url);
-    showToast("Link copied");
-  }catch{
-    showToast("Copy failed — select the URL text manually");
-  }
-});
 
 bind("savesClose", ()=>$("savesModal").classList.remove("open"));
 const savesModal=$("savesModal"); if(savesModal) savesModal.onclick=e=>{if(e.target===savesModal)savesModal.classList.remove("open");};
@@ -4742,9 +4898,13 @@ if(!Array.isArray(state.itemRemaining) || (state.itemRemaining.length===0 && (!s
 if(typeof applyProfessionFilter==="function") applyProfessionFilter();
 if(typeof syncSkillItems==="function") syncSkillItems();
 try { renderAll(); }
-catch(e){ console.error(e); showToast("UI error — try Full Reset in Tools"); }
-renderLandingList();
-showLanding();
+catch(e){ try{ console.error("renderAll", e); }catch(e2){} try{ showToast("UI error — saves should still work"); }catch(e3){} }
+try { renderLandingList(); } catch(e){ try{ console.error("renderLandingList", e); }catch(e2){} }
+try { showLanding(); } catch(e){ try{ console.error("showLanding", e); }catch(e2){} }
+try {
+  const btn=$("landingCreateBtn");
+  if(btn && !btn._boundLanding){ btn._boundLanding=true; btn.onclick=landingCreate; }
+} catch(e){}
 
 </script>
 </body>
