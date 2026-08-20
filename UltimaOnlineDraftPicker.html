@@ -150,11 +150,16 @@
     .panel{width:100%;max-width:700px;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:1.05rem 1.2rem;margin-top:1.5rem}
     .panel h2{font-size:1.05rem;color:#aaa;margin-bottom:.65rem;font-weight:600}
     .panel .hint{font-size:.8rem;color:#666;margin-bottom:.65rem}
-    .slots{display:flex;flex-wrap:wrap;gap:.5rem}
-    .slot{min-width:110px;min-height:52px;background:#1c1c24;border:1px dashed #3d3d4a;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:.4rem .6rem;font-size:.85rem;cursor:pointer;text-align:center}
+    .slots{display:flex;flex-wrap:wrap;gap:.65rem .5rem;align-items:flex-start}
+    .slot-cell{display:flex;flex-direction:column;align-items:center;gap:.3rem;min-width:120px}
+    .slot{min-width:110px;min-height:52px;background:#1c1c24;border:1px dashed #3d3d4a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.45rem .55rem;font-size:.85rem;cursor:pointer;text-align:center}
     .slot:hover{border-color:#6c5ce7}
-    .slot.filled{border-style:solid;border-color:#00cec9;color:#00cec9;background:#1a2a28}
+    .slot.filled{border-style:solid;border-color:#00cec9;color:#00cec9;background:#1a2a28;cursor:default}
     .slot.empty-label{color:#555;font-size:.78rem}
+    .slot-replace-btn{background:#2a2418;border:1px solid #5a4a28;color:#fdcb6e;font-size:.72rem;padding:.25rem .45rem;border-radius:6px;cursor:pointer;width:100%;max-width:120px}
+    .slot-replace-btn:hover{background:#3a3220}
+    .slot-claim-btn{background:transparent;border:1px solid #1e4a44;color:#00cec9;font-size:.75rem;padding:.2rem .45rem;border-radius:6px;cursor:pointer;margin-top:.25rem}
+    .slot-claim-btn:hover{background:#1a2a28}
     .picked-list{display:flex;flex-wrap:wrap;gap:.45rem}
     .picked-item{background:#1a2a28;border:1px solid #1e4a44;color:#00cec9;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;font-weight:500}
     .ban-item{background:#2a1a1a;border:1px solid #5a2a2a;color:#f88;padding:.35rem .75rem;border-radius:999px;font-size:.85rem;display:inline-flex;align-items:center;gap:.4rem}
@@ -274,14 +279,14 @@
   </div>
 
   </div>
-  <div class="panel">
-    <h2>Skills Milestone Slots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
-    <p class="hint">Bank skills for later. Slots unlock with prestige (P1=1, P2=2…). Empty = bank · Filled ✓ = claim into your draft.</p>
+  <div class="panel" id="skillMilestonePanel" style="display:none">
+    <h2>Skills Milestone slots <span style="color:#666;font-weight:400;font-size:.85rem" id="slotCountLabel"></span></h2>
+    <p class="hint">Unlocks after first prestige. Bank a skill · Claim into drafted · Replace (3 rerolls) only while not in Drafted. Death reset lets you claim or replace again.</p>
     <div class="slots" id="milestoneSlots"></div>
   </div>
   <div class="panel" id="itemMilestonePanel" style="display:none">
     <h2>Item Milestone slots <span style="color:#666;font-weight:400;font-size:.85rem" id="itemSlotCountLabel"></span></h2>
-    <p class="hint">Bank packed packs or items for later (same prestige unlock count). Empty = bank · Filled ✓ = claim into item draft.</p>
+    <p class="hint">Unlocks after first prestige (and item draft on). Claim into drafted · Replace (3 rerolls) only while not in Drafted. Death reset lets you claim or replace again.</p>
     <div class="slots" id="itemMilestoneSlots"></div>
   </div>
   <div class="panel">
@@ -448,7 +453,8 @@
         <option value="packed">Packed</option>
         <option value="unpacked">Unpacked</option>
       </select></div></div>
-    <div class="mod-row"><input type="checkbox" id="modDraftReroll"><div><strong>Reroll drafted items</strong><div class="sub">On item chips only: spend 1 prestige reroll token to return that item to the pool and gain +1 Generate charge (skills stay locked).</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modDraftReroll"><div><strong>Reroll drafted items</strong><div class="sub">On item chips: spend 1 prestige reroll token to return that item to the pool and gain +1 Generate charge.</div></div></div>
+    <div class="mod-row"><input type="checkbox" id="modDraftRerollSkills"><div><strong>Reroll drafted skills</strong><div class="sub">On skill chips (one at a time): spend 1 prestige reroll to return that skill to the pool and +1 skill gen charge. Starter-draft skills are locked and cannot be rerolled.</div></div></div>
     <div class="mod-row"><input type="checkbox" id="modQuests"><div><strong>Enable Quests</strong><div class="sub">Shows Generate Quest — does not use Generate charges</div></div></div>
     <div class="mod-row"><div style="flex:1"><strong>Task cooldown (minutes)</strong><div class="sub">Default 60. Use 0 for no rest between completed tasks.</div>
       <input type="number" id="modQuestCd" min="0" value="60" style="margin-top:.35rem;width:100%"></div></div>
@@ -576,6 +582,12 @@
           <div><strong>Reroll drafted items</strong>
             <div class="sub">Spend a prestige reroll token to return a drafted item and regain a generate charge (not skills)</div>
           </div>
+        <div class="mod-row">
+          <input type="checkbox" id="rsDraftRerollSkills">
+          <div><strong>Reroll drafted skills</strong>
+            <div class="sub">Spend prestige rerolls to return non-starter drafted skills (+1 skill gen). Starter skills stay locked.</div>
+          </div>
+        </div>
         </div>
         <div style="border-top:1px solid #2a2a35;margin:1rem 0 .75rem;padding-top:.85rem">
           <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;color:#aaa">
@@ -670,12 +682,61 @@
 // ============================================================
 const MASTER_LIST = [
   "Free Pick",
-"Alchemy","Anatomy","Druidism","Mercantile","ArmsLore","Parry","Begging","Blacksmith","Bowcraft","Peacemaking",
-"Camping","Carpentry","Cartography","Cooking","Searching","Discordance","Psychology","Healing","Seafaring","Forensics",
-"Herding","Hiding","Provocation","Inscribe","Lockpicking","Magery","MagicResist","Tactics","Snooping","Musicianship",
-"Poisoning","Marksmanship","Spiritualism","Stealing","Tailoring","Taming","Tasting","Tinkering","Tracking","Veterinary",
-"Swords","Bludgeoning","Fencing","FistFighting","Lumberjacking","Mining","Meditation","Stealth","RemoveTrap","Necromancy",
-"Focus","Knightship","Bushido","Ninjitsu","Elementalism","Free Pick"
+  "Alchemy",
+  "Anatomy",
+  "ArmsLore",
+  "Begging",
+  "Blacksmith",
+  "Bludgeoning",
+  "Bowcraft",
+  "Bushido",
+  "Camping",
+  "Carpentry",
+  "Cartography",
+  "Cooking",
+  "Discordance",
+  "Druidism",
+  "Elementalism",
+  "Fencing",
+  "FistFighting",
+  "Focus",
+  "Forensics",
+  "Healing",
+  "Herding",
+  "Hiding",
+  "Inscribe",
+  "Knightship",
+  "Lockpicking",
+  "Lumberjacking",
+  "Magery",
+  "MagicResist",
+  "Marksmanship",
+  "Meditation",
+  "Mercantile",
+  "Mining",
+  "Musicianship",
+  "Necromancy",
+  "Ninjitsu",
+  "Parry",
+  "Peacemaking",
+  "Poisoning",
+  "Provocation",
+  "Psychology",
+  "RemoveTrap",
+  "Seafaring",
+  "Searching",
+  "Snooping",
+  "Spiritualism",
+  "Stealing",
+  "Stealth",
+  "Swords",
+  "Tactics",
+  "Tailoring",
+  "Taming",
+  "Tasting",
+  "Tinkering",
+  "Tracking",
+  "Veterinary"
 ];
 
 // Challenge skill-ban codes (full ban). Token form: z + code e.g. za1
@@ -759,6 +820,7 @@ const RULESET_PRESETS = {
       itemMode: "packed",
       skillItems: false,
       draftReroll: false,
+      draftRerollSkills: false,
       questsEnabled: true,
       questCooldownMinutes: 30,
       goldItems: false,
@@ -803,6 +865,7 @@ const RULESET_PRESETS = {
       itemMode: "unpacked",
       skillItems: false,
       draftReroll: false,
+      draftRerollSkills: false,
       questsEnabled: false,
       questCooldownMinutes: 60,
       goldItems: false,
@@ -833,6 +896,7 @@ const RULESET_PRESETS = {
       itemMode: "packed",
       skillItems: false,
       draftReroll: false,
+      draftRerollSkills: false,
       questsEnabled: false,
       questCooldownMinutes: 60,
       goldItems: false,
@@ -863,6 +927,7 @@ const RULESET_PRESETS = {
       itemMode: "packed",
       skillItems: false,
       draftReroll: false,
+      draftRerollSkills: false,
       questsEnabled: true,
       questCooldownMinutes: 0,
       skipPenalty: true,
@@ -1593,6 +1658,7 @@ const FREE_PICK = "Free Pick";
 let state = {
   remaining:[], picked:[], bans:{},
   milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  milestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
   unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
   generateCharges:0, itemCharges:0, chargesSpent:0, itemChargesSpent:0, levelsSinceReward:0,
   starterUses:0, starterItemUses:0,
@@ -1623,6 +1689,7 @@ let state = {
   starterToken:true,
   starterItemToken:true,
   itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  itemMilestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
   skillValues:{},
   extraProfessions:[],
   professionCoinsSpent:0,
@@ -1990,7 +2057,11 @@ function updateStatus(){
 
   const scl=$("slotCountLabel");
   if(scl) scl.textContent=`(${(state.milestones||[]).filter(Boolean).length} filled · ${state.unlockedSlots}/${MAX_MILESTONE_SLOTS} unlocked)`;
-  const imp=$("itemMilestonePanel"); if(imp) imp.style.display=itemOn?"":"none";
+  const hasPrestige = (state.prestige||0) >= 1 || (state.unlockedSlots||0) >= 1;
+  const smp=$("skillMilestonePanel");
+  if(smp) smp.style.display=hasPrestige?"":"none";
+  const imp=$("itemMilestonePanel");
+  if(imp) imp.style.display=(itemOn && hasPrestige)?"":"none";
   const bp=$("buyProfBtn");
   if(bp){
     // Show only when profession limit is on AND coins can be earned (gold items or professions enable coins)
@@ -2029,6 +2100,12 @@ function setChallengeBleek(on){
   if(typeof updateChallengeLock==="function") updateChallengeLock();
   showToast(on?"Bleek tools unlocked (this session)":"Bleek tools locked");
 }
+function isLockedRuleset(){
+  // Named preset rulesets (not custom / empty) cannot open Modifiers
+  const n=(state&&state.rulesetName)||"";
+  if(!n || n==="custom") return false;
+  return true;
+}
 function updateChallengeLock(){
   const challenge=!!(state&&state.challenge);
   const bleek=isChallengeBleek();
@@ -2043,12 +2120,18 @@ function updateChallengeLock(){
         el.style.display=(state.mods&&state.mods.itemDraft)?"inline-flex":"none";
       } else if(el.id==="genChallengeBtn"){
         el.style.display=challenge?"none":"inline-flex"; // always hide gen code in challenge
+      } else if(el.id==="modBtn"){
+        // Hide modifiers on challenge OR named (non-custom) rulesets
+        el.style.display=(challenge || isLockedRuleset())?"none":"inline-flex";
       } else {
         el.style.display="inline-flex";
       }
       el.removeAttribute("data-was-locked");
     }
   });
+  // Always hide Modifiers in challenge or locked preset ruleset
+  const modBtn=$("modBtn");
+  if(modBtn && (challenge || isLockedRuleset())) modBtn.style.display="none";
   // Generate challenge code: never show during challenge (even bleek uses patch)
   const gen=$("genChallengeBtn");
   if(gen && challenge) gen.style.display="none";
@@ -2126,6 +2209,9 @@ function applyChallengePatch(){
   pushHistory("Challenge patched");
   showToast("Challenge rules updated — progress kept");
 }
+function isStarterLockedSkill(name){
+  return Array.isArray(state.starterLockedSkills) && state.starterLockedSkills.includes(name);
+}
 function renderPicked(){
   const el=$("pickedList");
   if(!el) return;
@@ -2133,14 +2219,23 @@ function renderPicked(){
   if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
   const all=[...state.picked.map(i=>({n:i,t:"skill"})),...state.itemPicked.map(i=>({n:i,t:"item"}))];
   if(!all.length){el.innerHTML=`<span class="no-picked">Nothing picked yet</span>`;return;}
-  const canRefund=!!(state.mods&&state.mods.draftReroll);
+  const canRefundItem=!!(state.mods&&state.mods.draftReroll);
+  const canRefundSkill=!!(state.mods&&state.mods.draftRerollSkills);
   el.innerHTML=all.map(x=>{
-    const tip=x.t==="item"
+    let tip=x.t==="item"
       ? "Item you may use — drafted item unlock"
       : "Skill you may use — drafted skill unlock";
-    const btn=(canRefund && x.t==="item")
-      ? ` <button data-refund-type="item" data-refund-name="${x.n}" title="Spend 1 prestige reroll: return item to pool and +1 Generate charge" style="background:transparent;border:none;color:#fdcb6e;cursor:pointer;padding:0 0 0 .25rem;">↩</button>`
-      : "";
+    let btn="";
+    if(x.t==="item" && canRefundItem){
+      btn=` <button data-refund-type="item" data-refund-name="${x.n}" title="Spend 1 prestige reroll: return item to pool and +1 Generate charge" style="background:transparent;border:none;color:#fdcb6e;cursor:pointer;padding:0 0 0 .25rem;">↩</button>`;
+    } else if(x.t==="skill" && canRefundSkill){
+      if(isStarterLockedSkill(x.n)){
+        tip="Starter skill — locked (cannot reroll)";
+        btn=` <span title="Starter skill locked" style="color:#888;font-size:.75rem;margin-left:.2rem">🔒</span>`;
+      } else {
+        btn=` <button data-refund-type="skill" data-refund-name="${x.n}" title="Spend 1 prestige reroll: return skill to pool and +1 Skill gen charge" style="background:transparent;border:none;color:#fdcb6e;cursor:pointer;padding:0 0 0 .25rem;">↩</button>`;
+      }
+    }
     return `<span class="picked-item" title="${tip}">${x.n}${x.t==="item"?" (item)":""}${btn}</span>`;
   }).join("");
   el.querySelectorAll("[data-refund-name]").forEach(b=>{
@@ -2151,18 +2246,37 @@ function renderPicked(){
   });
 }
 function refundDrafted(kind, name){
-  if(!(state.mods&&state.mods.draftReroll)) return showToast("Enable “Reroll drafted items” in Modifiers");
-  if(kind!=="item") return showToast("Only drafted items can be rerolled");
   if(state.rerolls<1) return showToast("No reroll tokens");
-  if(!state.itemPicked.includes(name)) return;
-  state.itemPicked=state.itemPicked.filter(x=>x!==name);
-  if(!state.itemRemaining.includes(name)) state.itemRemaining.push(name);
-  state.rerolls-=1;
-  // Shared skill charges get +1, or item charges if gold mode
-  if(state.mods&&state.mods.goldItems) state.itemCharges=(state.itemCharges||0)+1;
-  else state.generateCharges=(state.generateCharges||0)+1;
-  save(); updateStatus(); renderPicked();
-  showToast(`Returned item ${name} · +1 gen · −1 reroll`);
+  if(kind==="item"){
+    if(!(state.mods&&state.mods.draftReroll)) return showToast("Enable “Reroll drafted items” in Modifiers");
+    if(!state.itemPicked.includes(name)) return;
+    state.itemPicked=state.itemPicked.filter(x=>x!==name);
+    if(!state.itemRemaining.includes(name)) state.itemRemaining.push(name);
+    state.rerolls-=1;
+    if(state.mods&&state.mods.goldItems) state.itemCharges=(state.itemCharges||0)+1;
+    else state.generateCharges=(state.generateCharges||0)+1;
+    save(); updateStatus(); renderPicked();
+    pushHistory("Item reroll returned: "+name);
+    showToast(`Returned item ${name} · +1 gen · −1 reroll`);
+    return;
+  }
+  if(kind==="skill"){
+    if(!(state.mods&&state.mods.draftRerollSkills)) return showToast("Enable “Reroll drafted skills” in Modifiers");
+    if(isStarterLockedSkill(name)) return showToast("Starter skills cannot be rerolled");
+    if(!state.picked.includes(name)) return;
+    // one skill at a time — already enforced by single-chip click
+    state.picked=state.picked.filter(x=>x!==name);
+    if(!state.remaining.includes(name) && name!==FREE_PICK) state.remaining.push(name);
+    state.rerolls-=1;
+    state.generateCharges=(state.generateCharges||0)+1;
+    if(typeof syncSkillItems==="function") syncSkillItems();
+    save(); updateStatus(); renderPicked();
+    if(typeof renderSkillValues==="function") renderSkillValues();
+    pushHistory("Skill reroll returned: "+name);
+    showToast(`Returned skill ${name} · +1 skill gen · −1 reroll`);
+    return;
+  }
+  showToast("Unknown refund type");
 }
 function cloneState(){ return JSON.parse(JSON.stringify(state)); }
 function normalizeState(data){
@@ -2173,15 +2287,16 @@ function normalizeState(data){
   const s = Object.assign({
     remaining:[], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  milestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
     unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
-    mods:{requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
+    mods:{requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,draftRerollSkills:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15},
     itemRemaining:[], itemPicked:[]
   }, data);
   while(s.milestones.length<MAX_MILESTONE_SLOTS) s.milestones.push(null);
   s.milestones=s.milestones.slice(0,MAX_MILESTONE_SLOTS);
   if(!s.mods) s.mods={};
-  s.mods = Object.assign({requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15}, s.mods);
+  s.mods = Object.assign({requirePrereqs:false,customInterval:false,levelsPerCharge:4,chargesPerAward:1,maxLevel:100,starterLimitOn:false,starterMax:null,itemDraft:false,itemMode:"packed",skillItems:false,draftReroll:false,draftRerollSkills:false,questsEnabled:false,questCooldownMinutes:60,goldItems:false,professions:false,gatherSkill:"Mining",craftSkill:"Blacksmith",goldenChance:0.15,freePickChance:0.15}, s.mods);
   if(!Array.isArray(s.itemRemaining)) s.itemRemaining=defaultItemPool(s.mods.itemMode||"packed");
   if(!Array.isArray(s.itemPicked)) s.itemPicked=[];
   if(typeof s.chargesSpent!=="number") s.chargesSpent=0;
@@ -2191,6 +2306,9 @@ function normalizeState(data){
   if(typeof s.mods.questCooldownMinutes!=="number") s.mods.questCooldownMinutes=60;
   if(typeof s.mods.skipPenalty!=="boolean") s.mods.skipPenalty=false;
   if(typeof s.mods.skipPenaltyMinutes!=="number") s.mods.skipPenaltyMinutes=15;
+  if(typeof s.mods.draftRerollSkills!=="boolean") s.mods.draftRerollSkills=false;
+  if(!Array.isArray(s.starterLockedSkills)) s.starterLockedSkills=[];
+
   if(typeof s.mods.requirePrereqs!=="boolean"){
     // Legacy requirePrereqs: true meant no gate; false meant gated
     if(typeof s.mods.ignorePrereqs==="boolean") s.mods.requirePrereqs = !s.mods.ignorePrereqs;
@@ -2222,6 +2340,12 @@ function normalizeState(data){
   if(!Array.isArray(s.itemMilestones)) s.itemMilestones=Array(MAX_MILESTONE_SLOTS).fill(null);
   while(s.itemMilestones.length<MAX_MILESTONE_SLOTS) s.itemMilestones.push(null);
   s.itemMilestones=s.itemMilestones.slice(0,MAX_MILESTONE_SLOTS);
+  if(!Array.isArray(s.milestoneClaimed)) s.milestoneClaimed=Array(MAX_MILESTONE_SLOTS).fill(false);
+  while(s.milestoneClaimed.length<MAX_MILESTONE_SLOTS) s.milestoneClaimed.push(false);
+  s.milestoneClaimed=s.milestoneClaimed.slice(0,MAX_MILESTONE_SLOTS).map(x=>!!x);
+  if(!Array.isArray(s.itemMilestoneClaimed)) s.itemMilestoneClaimed=Array(MAX_MILESTONE_SLOTS).fill(false);
+  while(s.itemMilestoneClaimed.length<MAX_MILESTONE_SLOTS) s.itemMilestoneClaimed.push(false);
+  s.itemMilestoneClaimed=s.itemMilestoneClaimed.slice(0,MAX_MILESTONE_SLOTS).map(x=>!!x);
   if(typeof s.mods.goldItems!=="boolean") s.mods.goldItems=false;
   if(typeof s.mods.skillItems!=="boolean") s.mods.skillItems=false;
   if(typeof s.mods.professions!=="boolean") s.mods.professions=false;
@@ -2344,6 +2468,7 @@ function createSave(name){
   const fresh=normalizeState({
     remaining:[...MASTER_LIST], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  milestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
     unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, chargesSpent:0, levelsSinceReward:0, starterUses:0,
     mods:JSON.parse(JSON.stringify(state.mods)),
@@ -2675,6 +2800,7 @@ function readRulesetForm(){
     itemMode: ($("rsItemMode")&&$("rsItemMode").value)||"packed",
     skillItems: false,
     draftReroll: !!( $("rsDraftReroll")&&$("rsDraftReroll").checked ),
+    draftRerollSkills: !!( $("rsDraftRerollSkills")&&$("rsDraftRerollSkills").checked ),
     questsEnabled: !!( $("rsQuests")&&$("rsQuests").checked ),
     questCooldownMinutes: 60,
     skipPenalty: !!( $("rsSkipPenalty")&&$("rsSkipPenalty").checked ),
@@ -2708,6 +2834,7 @@ function buildChallengeTokens(mods, banList, autoList, packBanList, itemBanList,
   if(mods.questsEnabled) t.push("La");
   if(mods.professions) t.push("9");
   if(mods.draftReroll) t.push("x");
+  if(mods.draftRerollSkills) t.push("xs");
   if(mods.rerollEveryLevel) t.push("R");
   (banList||[]).forEach(sk=>{
     const c = (typeof SKILL_BAN_CODES!=="undefined" && SKILL_BAN_CODES[sk]) || null;
@@ -2836,6 +2963,7 @@ function parseChallengeCode(raw){
     else if(tok==="La") mods.questsEnabled=true;
     else if(tok==="9") mods.professions=true;
     else if(tok==="x") mods.draftReroll=true;
+    else if(tok==="xs") mods.draftRerollSkills=true;
     else if(tok==="R") mods.rerollEveryLevel=true;
     else if(/^z[a-z0-9]{2}$/i.test(tok)){
       const sk=BAN_CODE_TO_SKILL[tok.slice(1).toLowerCase()];
@@ -2882,6 +3010,7 @@ function applyChallengeCodeToForm(){
   if($("rsQuests")) $("rsQuests").checked=!!m.questsEnabled;
   if($("rsProfessions")) $("rsProfessions").checked=!!m.professions;
   if($("rsDraftReroll")) $("rsDraftReroll").checked=!!m.draftReroll;
+  if($("rsDraftRerollSkills")) $("rsDraftRerollSkills").checked=!!m.draftRerollSkills;
   if($("rsInterval")) $("rsInterval").value=m.customInterval?m.levelsPerCharge:"";
   if($("rsChargesPer")) $("rsChargesPer").value=m.chargesPerAward||1;
   if($("rsMaxLevel")) $("rsMaxLevel").value=m.maxLevel||100;
@@ -2928,6 +3057,7 @@ function updateRulesetDesc(){
   if(mods.questsEnabled) lines.push(`<li><strong>Quests</strong> enabled.</li>`);
   if(mods.professions) lines.push(`<li><strong>Professions</strong> — ${mods.gatherSkill} + ${mods.craftSkill}.</li>`);
   if(mods.draftReroll) lines.push(`<li><strong>Reroll drafted items</strong> (prestige reroll tokens) allowed.</li>`);
+  if(mods.draftRerollSkills) lines.push(`<li><strong>Reroll drafted skills</strong> (non-starter only) allowed.</li>`);
   const autos=window._rsAutoSkills||[];
   if(autos.length) lines.push(`<li><strong>Starting skills:</strong> ${autos.join(", ")}</li>`);
   lines.push(`<li>Max level <strong>${mods.maxLevel}</strong> · <strong>${mods.chargesPerAward}</strong> charge(s)/award.</li>`);
@@ -2986,6 +3116,7 @@ function createSaveWithMods(name, mods, opts){
   const fresh=normalizeState({
     remaining:[...MASTER_LIST], picked:[], bans:{},
     milestones:Array(MAX_MILESTONE_SLOTS).fill(null),
+  milestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
     unlockedSlots:0, level:1, xp:0, totalXp:0, xpIngame:0, xpQuests:0, prestige:0, rerolls:0,
     generateCharges:0, itemCharges:0, chargesSpent:0, itemChargesSpent:0,
     levelsSinceReward:0, starterUses:0, starterItemUses:0,
@@ -2996,7 +3127,8 @@ function createSaveWithMods(name, mods, opts){
     totalCoins:0, coinsIngame:0, coinsQuests:0, spendableCoins:0, coinsSpent:0, lastLifetimeReport:0, lifetimeHistory:[],
     starterToken:true, starterItemToken:true,
     itemMilestones:Array(MAX_MILESTONE_SLOTS).fill(null),
-    skillValues:{}, extraProfessions:[], professionCoinsSpent:0, history:[],
+  itemMilestoneClaimed:Array(MAX_MILESTONE_SLOTS).fill(false),
+    skillValues:{}, extraProfessions:[], professionCoinsSpent:0, history:[], starterLockedSkills:[],
     challenge: !!opts.challenge,
     challengeCode: opts.challengeCode||"",
     bans: (opts.bans && typeof opts.bans==="object") ? opts.bans : {},
@@ -3048,51 +3180,136 @@ function renderSavesList(){
   });
 }
 
+
+function regrantClaimedMilestones(){
+  if(!Array.isArray(state.milestones)) return;
+  if(!Array.isArray(state.milestoneClaimed)) state.milestoneClaimed=Array(MAX_MILESTONE_SLOTS).fill(false);
+  if(!Array.isArray(state.picked)) state.picked=[];
+  state.milestones.forEach((name,i)=>{
+    if(!name || !state.milestoneClaimed[i]) return;
+    if(!state.picked.includes(name)) state.picked.push(name);
+    if(Array.isArray(state.remaining)) state.remaining=state.remaining.filter(x=>x!==name);
+  });
+  if(!Array.isArray(state.itemMilestones)) return;
+  if(!Array.isArray(state.itemMilestoneClaimed)) state.itemMilestoneClaimed=Array(MAX_MILESTONE_SLOTS).fill(false);
+  if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
+  state.itemMilestones.forEach((name,i)=>{
+    if(!name || !state.itemMilestoneClaimed[i]) return;
+    if(!state.itemPicked.includes(name)) state.itemPicked.push(name);
+    if(Array.isArray(state.itemRemaining)) state.itemRemaining=state.itemRemaining.filter(x=>x!==name);
+  });
+  if(typeof syncSkillItems==="function") syncSkillItems();
+}
 function syncMilestoneSlots(){state.unlockedSlots=Math.min(state.prestige,MAX_MILESTONE_SLOTS);}
 function renderMilestones(){
   syncMilestoneSlots();
   const el=$("milestoneSlots"); if(!el) return; el.innerHTML="";
+  if(!Array.isArray(state.milestones)) state.milestones=Array(MAX_MILESTONE_SLOTS).fill(null);
   for(let i=0;i<MAX_MILESTONE_SLOTS;i++){
+    const cell=document.createElement("div"); cell.className="slot-cell";
     const slot=document.createElement("div"); slot.className="slot";
-    if(i>=state.unlockedSlots){slot.innerHTML=`<span class="empty-label">Locked</span>`;slot.style.opacity=".4";slot.style.cursor="default";}
-    else if(state.milestones[i]){
+    if(i>=state.unlockedSlots){
+      slot.innerHTML=`<span class="empty-label">Locked</span>`;
+      slot.style.opacity=".4"; slot.style.cursor="default";
+      cell.appendChild(slot);
+    } else if(state.milestones[i]){
+      const name=state.milestones[i];
+      // "Claimed" only means currently in Drafted — death reset clears picked so Claim/Replace return
+      const inDraft=Array.isArray(state.picked) && state.picked.includes(name);
       slot.classList.add("filled");
-      slot.innerHTML=`${state.milestones[i]} <button class="slot-remove" data-idx="${i}">✓</button>`;
-      slot.querySelector("button").onclick=e=>{e.stopPropagation();claimMilestone(i);};
+      let html=`<div style="font-weight:600">${name}${inDraft?' <span title="In drafted" style="color:#00b894">✓</span>':''}</div>`;
+      if(!inDraft){
+        html+=`<button type="button" class="slot-claim-btn" data-claim="${i}" title="Add to drafted skills">Claim</button>`;
+      } else {
+        html+=`<div style="font-size:.72rem;color:#00b894;margin-top:.2rem">In drafted</div>`;
+      }
+      slot.innerHTML=html;
+      const claimBtn=slot.querySelector("[data-claim]");
+      if(claimBtn) claimBtn.onclick=e=>{ e.stopPropagation(); claimMilestone(i); };
+      cell.appendChild(slot);
+      // Replace under the box — only while NOT in drafted
+      if(!inDraft){
+        const rep=document.createElement("button");
+        rep.type="button";
+        rep.className="slot-replace-btn";
+        rep.textContent="Replace (3 rerolls)";
+        rep.title="Spend 3 rerolls to choose a different banked skill (blocked while in Drafted)";
+        rep.onclick=e=>{ e.stopPropagation(); replaceMilestone(i); };
+        cell.appendChild(rep);
+      }
     } else {
       slot.innerHTML=`<span class="empty-label">+ Bank card</span>`;
       slot.onclick=()=>openMilestonePicker(i);
+      cell.appendChild(slot);
     }
-    el.appendChild(slot);
+    el.appendChild(cell);
   }
   updateStatus();
 }
-function openMilestonePicker(idx){
-  const choices=state.remaining.filter(x=>x!==FREE_PICK&&!isBanned(x,"any")&&!isBlockedByProfession(x));
-  if(!choices.length) return showToast("No skills left to bank (pool empty or all locked)");
-  currentMode="skillMilestone";
-  $("modalTitle").textContent="Bank a skill";
+function openMilestonePicker(idx, isReplace){
+  // Bank does NOT remove from remaining — milestone is a reservation / reward pick
+  const banked=new Set((state.milestones||[]).filter(Boolean));
+  const choices=MASTER_LIST.filter(x=>
+    x!==FREE_PICK && !isBanned(x,"any") && !isBlockedByProfession(x) && !banked.has(x)
+  ).sort((a,b)=>a.localeCompare(b));
+  if(!choices.length) return showToast("No skills available to bank");
+  currentMode=isReplace?"skillMilestoneReplace":"skillMilestone";
+  window._milestoneIdx=idx;
+  $("modalTitle").textContent=isReplace?"Replace banked skill (3 rerolls)":"Bank a skill";
   $("pickList").innerHTML="";
   choices.forEach(item=>{
     const b=document.createElement("button"); b.textContent=item;
     b.onclick=()=>{
+      if(isReplace){
+        if((state.rerolls||0)<3) return showToast("Need 3 reroll tokens");
+        const cur=state.milestones[idx];
+        if(cur && state.picked && state.picked.includes(cur))
+          return showToast("In drafted — cannot replace");
+        state.rerolls-=3;
+        state.milestones[idx]=item;
+        closeModal(); save(); renderMilestones(); updateStatus();
+        pushHistory("Milestone skill replaced: "+(cur||"?")+" → "+item+" (−3 rerolls)");
+        showToast("Replaced with "+item+" (−3 rerolls)");
+        return;
+      }
       state.milestones[idx]=item;
-      state.remaining=state.remaining.filter(x=>x!==item);
-      closeModal(); save(); renderMilestones(); updateStatus(); showToast("Banked skill: "+item);
+      // do NOT remove from remaining
+      closeModal(); save(); renderMilestones(); updateStatus();
+      showToast("Banked skill: "+item+" (still in pool until claimed)");
     };
     $("pickList").appendChild(b);
   });
   modal.classList.add("open");
 }
 function claimMilestone(i){
-  const n=state.milestones[i]; if(!n) return;
-  if(!state.picked.includes(n)) state.picked.push(n);
-  state.remaining=state.remaining.filter(x=>x!==n);
-  state.milestones[i]=null;
+  if(!Array.isArray(state.milestones)) state.milestones=[];
+  const n=state.milestones[i];
+  if(!n) return showToast("Empty milestone slot");
+  if(!Array.isArray(state.picked)) state.picked=[];
+  if(state.picked.includes(n)){
+    showToast(n+" is already in drafted");
+    renderMilestones();
+    return;
+  }
+  state.picked.push(n);
+  if(Array.isArray(state.remaining)) state.remaining=state.remaining.filter(x=>x!==n);
   if(typeof syncSkillItems==="function") syncSkillItems();
-  save(); renderMilestones(); renderPicked(); updateStatus();
+  save();
+  renderMilestones();
+  renderPicked();
+  updateStatus();
   if(typeof renderSkillValues==="function") renderSkillValues();
-  showToast("Claimed skill: "+n);
+  pushHistory("Milestone claimed skill: "+n);
+  showToast("Claimed skill → drafted: "+n);
+}
+function replaceMilestone(i){
+  if(!Array.isArray(state.milestones)) return;
+  const n=state.milestones[i];
+  if(!n) return showToast("Empty slot");
+  if(state.picked && state.picked.includes(n))
+    return showToast("In drafted — cannot replace until death reset removes it from Drafted");
+  if((state.rerolls||0)<3) return showToast("Need 3 reroll tokens");
+  openMilestonePicker(i, true);
 }
 
 function applyXpTowardLevels(amount){
@@ -3206,6 +3423,7 @@ function applyModifiersRefresh(){
   state.mods.skillItems=$("modSkillItems")?$("modSkillItems").checked:false;
   state.mods.itemMode=$("modItemMode").value==="unpacked"?"unpacked":"packed";
   state.mods.draftReroll=$("modDraftReroll")?$("modDraftReroll").checked:false;
+  state.mods.draftRerollSkills=$("modDraftRerollSkills")?$("modDraftRerollSkills").checked:false;
   state.mods.questsEnabled=$("modQuests")?$("modQuests").checked:false;
   { const qcd=parseInt($("modQuestCd")&&$("modQuestCd").value,10); state.mods.questCooldownMinutes=(qcd===0||qcd)?Math.max(0,qcd):60; }
   state.mods.skipPenalty=!!($("modSkipPenalty")&&$("modSkipPenalty").checked);
@@ -3285,6 +3503,7 @@ function doPrestige(){
   if(typeof syncSkillItems==="function") syncSkillItems();
   syncMilestoneSlots(); clearQuestState();
   state.starterToken=true; state.starterItemToken=true;
+  state.starterLockedSkills=[]; // new life after prestige — re-lock on next starter finalize
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
   save(); updateStatus(); renderPicked(); renderMilestones(); renderQuestLog();
   if(typeof renderSkillValues==="function") renderSkillValues();
@@ -3316,19 +3535,23 @@ function deathReset(){
   state.coinsSpent=0;
   // Re-grant primary gather/craft + purchased professions (same as Apply/Refresh Rules)
   state.skillValues={}; // all skills back to 0 on death
+  state.starterLockedSkills=[]; // starter lock clears with death (new life starter)
   if(typeof applyAutoSkills==="function") applyAutoSkills();
   if(typeof applyBansToPools==="function") applyBansToPools();
   if(typeof applyProfessionFilter==="function") applyProfessionFilter();
   if(typeof syncSkillItems==="function") syncSkillItems();
   // professionCoinsSpent is never reduced / refunded
+  // Banked milestones stay; leaving Drafted means Claim and Replace are available again
   clearQuestState();
   pushHistory("Death reset");
   if(typeof renderSkillValues==="function") renderSkillValues();
   exitStarterMode(); generateCards=[]; pendingSelect=null; hideConfirm();
-  save(); updateStatus(); renderPicked(); renderQuestLog();
+  save(); updateStatus(); renderPicked(); renderMilestones();
+  if(typeof renderItemMilestones==="function") renderItemMilestones();
+  renderQuestLog();
   if(typeof renderSkillValues==="function") renderSkillValues();
   cardsEl.innerHTML=`<p class="empty">Death reset · charges, coins & quests restored</p>`;
-  showToast("Death reset");
+  showToast("Death reset · milestones banked still, Claim/Replace free again");
   promptForcedStarter();
 }
 function fullReset(){
@@ -3822,10 +4045,13 @@ function startCombatItems(){
 }
 function applyAutoSkills(){
   const list = (state.autoSkills||[]).filter(Boolean);
+  if(!Array.isArray(state.starterLockedSkills)) state.starterLockedSkills=[];
   list.forEach(sk=>{
     if(!sk || sk==="Free Pick") return;
     if(!state.picked.includes(sk)) state.picked.push(sk);
     state.remaining = state.remaining.filter(x=>x!==sk);
+    // Auto-granted ruleset skills are locked from skill-reroll (same as starter)
+    if(!state.starterLockedSkills.includes(sk)) state.starterLockedSkills.push(sk);
   });
   if(typeof syncSkillItems==="function") syncSkillItems();
 }
@@ -3869,6 +4095,9 @@ function finalizeStarter(){
     return;
   }
   names.forEach(n=>{if(!state.picked.includes(n)) state.picked.push(n); state.remaining=state.remaining.filter(x=>x!==n);});
+  // Lock starter skills so they cannot be prestige-rerolled later
+  if(!Array.isArray(state.starterLockedSkills)) state.starterLockedSkills=[];
+  names.forEach(n=>{ if(n && !state.starterLockedSkills.includes(n)) state.starterLockedSkills.push(n); });
   if(typeof syncSkillItems==="function") syncSkillItems();
   exitStarterMode();
   state.starterToken=false;
@@ -3914,6 +4143,95 @@ function openManualItem(){
   });
   modal.classList.add("open");
 }
+
+function claimItemMilestone(i){
+  if(!Array.isArray(state.itemMilestones)) state.itemMilestones=[];
+  const n=state.itemMilestones[i];
+  if(!n) return showToast("Empty item milestone slot");
+  if(!Array.isArray(state.itemPicked)) state.itemPicked=[];
+  if(!Array.isArray(state.itemRemaining)) state.itemRemaining=[];
+  if(state.itemPicked.includes(n)){
+    showToast(n+" is already in drafted items");
+    renderItemMilestones();
+    return;
+  }
+
+  if(typeof ITEM_PACKS!=="undefined" && ITEM_PACKS[n] && state.mods && state.mods.itemMode==="unpacked"){
+    (ITEM_PACKS[n]||[]).forEach(it=>{
+      if(it && !state.itemPicked.includes(it)) state.itemPicked.push(it);
+      state.itemRemaining=state.itemRemaining.filter(x=>x!==it);
+    });
+    if(!state.itemPicked.includes(n)) state.itemPicked.push(n);
+    state.itemRemaining=state.itemRemaining.filter(x=>x!==n);
+  } else {
+    if(!state.itemPicked.includes(n)) state.itemPicked.push(n);
+    state.itemRemaining=state.itemRemaining.filter(x=>x!==n);
+    if(typeof ITEM_PACKS!=="undefined" && ITEM_PACKS[n]){
+      (ITEM_PACKS[n]||[]).forEach(it=>{
+        state.itemRemaining=state.itemRemaining.filter(x=>x!==it);
+      });
+    }
+    if(typeof ITEM_PACKS!=="undefined"){
+      Object.keys(ITEM_PACKS).forEach(pk=>{
+        if((ITEM_PACKS[pk]||[]).includes(n)) state.itemRemaining=state.itemRemaining.filter(x=>x!==pk);
+      });
+    }
+  }
+  save();
+  renderItemMilestones();
+  renderPicked();
+  updateStatus();
+  pushHistory("Milestone claimed item: "+n);
+  showToast("Claimed item → drafted: "+n);
+}
+function replaceItemMilestone(i){
+  if(!Array.isArray(state.itemMilestones)) return;
+  const n=state.itemMilestones[i];
+  if(!n) return showToast("Empty slot");
+  if(state.itemPicked && state.itemPicked.includes(n))
+    return showToast("In drafted — cannot replace until death reset removes it from Drafted");
+  if((state.rerolls||0)<3) return showToast("Need 3 reroll tokens");
+  openItemMilestonePicker(i, true);
+}
+function openItemMilestonePicker(idx, isReplace){
+  const banked=new Set((state.itemMilestones||[]).filter(Boolean));
+  let choices=(state.itemRemaining||[]).filter(x=>x && !banked.has(x));
+  if(!choices.length){
+    // fallback: full default pool minus banked/picked
+    const mode=(state.mods&&state.mods.itemMode)||"packed";
+    const full=typeof defaultItemPool==="function"?defaultItemPool(mode):[];
+    const picked=new Set(state.itemPicked||[]);
+    choices=full.filter(x=>x && !banked.has(x) && !picked.has(x));
+  }
+  if(!choices.length) return showToast("No items available to bank");
+  currentMode=isReplace?"itemMilestoneReplace":"itemMilestone";
+  window._itemMilestoneIdx=idx;
+  $("modalTitle").textContent=isReplace?"Replace banked item (3 rerolls)":"Bank item / pack";
+  $("pickList").innerHTML="";
+  choices.forEach(item=>{
+    const b=document.createElement("button"); b.textContent=item;
+    b.onclick=()=>{
+      if(isReplace){
+        if((state.rerolls||0)<3) return showToast("Need 3 reroll tokens");
+        const cur=state.itemMilestones[idx];
+        if(cur && state.itemPicked && state.itemPicked.includes(cur))
+          return showToast("In drafted — cannot replace");
+        state.rerolls-=3;
+        state.itemMilestones[idx]=item;
+        closeModal(); save(); renderItemMilestones(); updateStatus();
+        pushHistory("Milestone item replaced: "+(cur||"?")+" → "+item+" (−3 rerolls)");
+        showToast("Replaced with "+item+" (−3 rerolls)");
+        return;
+      }
+      state.itemMilestones[idx]=item;
+      // do NOT remove from remaining until claim
+      closeModal(); save(); renderItemMilestones(); updateStatus();
+      showToast("Banked item: "+item+" (still in pool until claimed)");
+    };
+    $("pickList").appendChild(b);
+  });
+  modal.classList.add("open");
+}
 function renderItemMilestones(){
   const el=$("itemMilestoneSlots"); if(!el) return;
   syncMilestoneSlots();
@@ -3925,38 +4243,37 @@ function renderItemMilestones(){
     const slot=document.createElement("div");
     const locked=i>=(state.unlockedSlots||0);
     const val=state.itemMilestones[i];
-    if(locked){ slot.className="slot"; slot.style.opacity=".4"; slot.style.cursor="default"; slot.innerHTML=`<span class="empty-label">Locked</span>`; }
-    else if(val){
+    if(locked){
+      slot.className="slot"; slot.style.opacity=".4"; slot.style.cursor="default";
+      slot.innerHTML=`<span class="empty-label">Locked</span>`;
+    } else if(val){
+      const cell=document.createElement("div"); cell.className="slot-cell";
       slot.className="slot filled";
-      slot.innerHTML=`${val} <button class="slot-remove" data-i="${i}">✓</button>`;
-      slot.querySelector("button").onclick=(e)=>{
-        e.stopPropagation();
-        const n=state.itemMilestones[i];
-        state.itemMilestones[i]=null;
-        if(n&&!state.itemPicked.includes(n)) state.itemPicked.push(n);
-        state.itemRemaining=state.itemRemaining.filter(x=>x!==n);
-        save(); renderItemMilestones(); renderPicked(); updateStatus(); showToast("Claimed item: "+n);
-      };
+      const inDraft=Array.isArray(state.itemPicked) && state.itemPicked.includes(val);
+      let html=`<div style="font-weight:600">${val}${inDraft?' <span title="In drafted" style="color:#00b894">✓</span>':''}</div>`;
+      if(!inDraft){
+        html+=`<button type="button" class="slot-claim-btn" data-claim-item="${i}" title="Add to drafted items">Claim</button>`;
+      } else {
+        html+=`<div style="font-size:.72rem;color:#00b894;margin-top:.2rem">In drafted</div>`;
+      }
+      slot.innerHTML=html;
+      const cb=slot.querySelector("[data-claim-item]");
+      if(cb) cb.onclick=e=>{ e.stopPropagation(); claimItemMilestone(i); };
+      cell.appendChild(slot);
+      if(!inDraft){
+        const rep=document.createElement("button");
+        rep.type="button";
+        rep.className="slot-replace-btn";
+        rep.textContent="Replace (3 rerolls)";
+        rep.title="Spend 3 rerolls to choose a different banked item (blocked while in Drafted)";
+        rep.onclick=e=>{ e.stopPropagation(); replaceItemMilestone(i); };
+        cell.appendChild(rep);
+      }
+      el.appendChild(cell);
+      continue;
     } else {
       slot.className="slot"; slot.innerHTML=`<span class="empty-label">+ Bank item</span>`;
-      slot.onclick=()=>{
-        const choices=(state.itemRemaining||[]).filter(Boolean);
-        if(!choices.length) return showToast("No items/packs left to bank");
-        currentMode="itemMilestone";
-        window._itemMilestoneIdx=i;
-        $("modalTitle").textContent="Bank item / pack";
-        $("pickList").innerHTML="";
-        choices.forEach(item=>{
-          const b=document.createElement("button"); b.textContent=item;
-          b.onclick=()=>{
-            state.itemMilestones[window._itemMilestoneIdx]=item;
-            state.itemRemaining=state.itemRemaining.filter(x=>x!==item);
-            closeModal(); save(); renderItemMilestones(); renderPicked(); updateStatus(); showToast("Banked: "+item);
-          };
-          $("pickList").appendChild(b);
-        });
-        modal.classList.add("open");
-      };
+      slot.onclick=()=>openItemMilestonePicker(i, false);
     }
     el.appendChild(slot);
   }
@@ -3986,6 +4303,7 @@ function syncModUI(){
   if($("modSkillItems")) $("modSkillItems").checked=!!state.mods.skillItems;
   if($("modItemMode")) $("modItemMode").value=state.mods.itemMode||"packed";
   if($("modDraftReroll")) $("modDraftReroll").checked=!!state.mods.draftReroll;
+  if($("modDraftRerollSkills")) $("modDraftRerollSkills").checked=!!state.mods.draftRerollSkills;
   if($("modQuests")) $("modQuests").checked=!!state.mods.questsEnabled;
   if($("modQuestCd")) $("modQuestCd").value=(state.mods.questCooldownMinutes!=null?state.mods.questCooldownMinutes:60);
   if($("modSkipPenalty")) $("modSkipPenalty").checked=!!state.mods.skipPenalty;
@@ -4855,7 +5173,7 @@ bind("gcCopyBtn", async ()=>{
 });
 const gcm=$("genChallengeModal"); if(gcm) gcm.onclick=e=>{ if(e.target===gcm) gcm.classList.remove("open"); };
 
-["rsRequirePrereq","rsStarterLimit","rsStarterMax","rsItemDraft","rsItemMode","rsGoldItems","rsQuests","rsProfessions","rsGather","rsCraft","rsDraftReroll","rsInterval","rsChargesPer","rsMaxLevel"].forEach(id=>{
+["rsRequirePrereq","rsStarterLimit","rsStarterMax","rsItemDraft","rsItemMode","rsGoldItems","rsQuests","rsProfessions","rsGather","rsCraft","rsDraftReroll","rsDraftRerollSkills","rsInterval","rsChargesPer","rsMaxLevel"].forEach(id=>{
   const el=$(id); if(!el) return;
   el.addEventListener("change", onRulesetFormChange);
   el.addEventListener("input", onRulesetFormChange);
