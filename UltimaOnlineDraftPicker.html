@@ -225,8 +225,6 @@
     <button id="buyItemChargeBtn" title="Spend 500 coins for +1 Item Generate charge (not skill charges)" style="display:none;background:#b7950b;color:#1a1a2e">Buy Item Charge (500)</button>
     <button id="buyProfBtn" title="Spend 10,000 coins for a permanent extra profession skill" style="display:none;background:#b7950b;color:#1a1a2e">Buy Profession (10k)</button>
     <button id="modBtn" data-challenge-lock title="Rule toggles: prereqs, charge interval, max level, item packs, etc.">Modifiers</button>
-    <button id="savesBtn" title="Create, switch, rename, or delete named playthrough saves">Saves</button>
-    <button id="homeBtnTop" title="Return to character select landing" style="background:#2d2d38;color:#ccc;border:1px solid #3d3d4a">Characters</button>
     <button id="export" title="Export only the currently active save slot as JSON">Export Save</button>
     <label class="file-btn" title="Import JSON into the currently active save slot only">Import Save<input type="file" id="import" accept=".json,application/json"></label>
     <button id="deathReset" title="Return drafted skills/items to the pool and restore Generate charges from your level">Death Reset</button>
@@ -1948,14 +1946,23 @@ function updateStatus(){
     t+=` · W/S: <strong>${Math.round(weightedPrereqChance()*100)}%</strong>/<strong>${Math.round(smartPrereqChance()*100)}%</strong>`;
     ci.innerHTML=t;
   }
+  const handOpen = (Array.isArray(generateCards) && generateCards.length>0) || !!pendingSelect || !!starterMode;
   const gen=$("generate");
-  if(gen){ gen.disabled=skillCh<1; if(skillCh>=1) gen.classList.add("show"); else gen.classList.remove("show"); }
+  if(gen){
+    gen.disabled = skillCh<1 || handOpen;
+    if(skillCh>=1) gen.classList.add("show"); else gen.classList.remove("show");
+    gen.title = handOpen
+      ? "Finish your current draft selection before rolling again"
+      : "Spend 1 Skill gen roll to draft 3 skills";
+  }
   const genI=$("generateItem");
   if(genI){
     if(itemOn){
       genI.style.display="inline-flex"; genI.classList.add("show");
-      // gold mode uses itemCharges; shared mode uses skill generateCharges
-      genI.disabled = goldOn ? (itemCh<1) : (skillCh<1);
+      genI.disabled = handOpen || (goldOn ? (itemCh<1) : (skillCh<1));
+      genI.title = handOpen
+        ? "Finish your current draft selection before rolling again"
+        : "Spend 1 Item charge (or shared skill charge) to draft 3 items";
     } else { genI.style.display="none"; genI.classList.remove("show"); }
   }
   const manI=$("manualItemBtn"); if(manI) manI.style.display=itemOn?"inline-flex":"none";
@@ -3506,6 +3513,16 @@ function spendSkillCharge(){ state.generateCharges=Math.max(0,(state.generateCha
 function spendItemCharge(){ state.itemCharges=Math.max(0,(state.itemCharges||0)-1); state.itemChargesSpent=(state.itemChargesSpent||0)+1; }
 function generate(kind){
   generateKind=kind||"skill";
+  // Block wasting charges while a hand is still open
+  if(Array.isArray(generateCards) && generateCards.length>0){
+    return showToast("Pick from your current draft (or Confirm) before rolling again");
+  }
+  if(pendingSelect){
+    return showToast("Confirm or clear your current selection before rolling again");
+  }
+  if(starterMode){
+    return showToast("Finish or cancel the starter draft first");
+  }
   const itemUsesGold=!!(state.mods&&state.mods.itemDraft&&state.mods.goldItems);
   if(generateKind==="item"){
     if(!(state.mods&&state.mods.itemDraft)) return showToast("Enable Item Draft in Modifiers");
@@ -4768,7 +4785,6 @@ function goToLanding(){
   const sm=$("savesModal"); if(sm) sm.classList.remove("open");
 }
 bind("homeBtn", goToLanding);
-bind("homeBtnTop", goToLanding);
 bind("landingCreateBtn", landingCreate);
 
 bind("rulesetConfirm", confirmRuleset);
